@@ -65,6 +65,319 @@ type ProductionDetail = {
   stages: Stage[];
 };
 
+/*================= PROCESS TIMELINE COMPONENT =================*/
+function ProcessTimeline({ stages }: { stages: Stage[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "Finished":
+        return {
+          bg: "#16a34a",
+          text: "#fff",
+          label: "Hoàn thành",
+          icon: "checkmark" as const,
+        };
+      case "InProcessing":
+        return {
+          bg: "#f59e0b",
+          text: "#fff",
+          label: "Đang sản xuất",
+          icon: "time" as const,
+        };
+      case "Ready":
+        return {
+          bg: "#3b82f6",
+          text: "#fff",
+          label: "Sẵn sàng",
+          icon: "play" as const,
+        };
+      case "Scheduled":
+        return {
+          bg: "#6b7280",
+          text: "#fff",
+          label: "Chờ sản xuất",
+          icon: "ellipsis-horizontal" as const,
+        };
+      case "Unassigned":
+      default:
+        return {
+          bg: "#e5e7eb",
+          text: "#9ca3af",
+          label: "Chờ bắt đầu",
+          icon: "remove" as const,
+        };
+    }
+  };
+
+  const currentIndex = stages.findIndex((s) => s.status !== "Finished");
+
+  const formatShortDate = (date: string | null) => {
+    if (!date) return null;
+    const d = new Date(date);
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+
+  const finishedCount = stages.filter((s) => s.status === "Finished").length;
+  const progressPercent = Math.round((finishedCount / stages.length) * 100);
+
+  return (
+    <View style={tlStyles.container}>
+      {/* Header bấm để toggle */}
+      <TouchableOpacity
+        style={tlStyles.headerRow}
+        onPress={() => setExpanded((prev) => !prev)}
+        activeOpacity={0.75}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={tlStyles.title}>Tiến độ công đoạn</Text>
+          <Text style={tlStyles.subtitle}>
+            {currentIndex === -1
+              ? `Đã hoàn thành tất cả ${stages.length} công đoạn`
+              : `Đang ở công đoạn ${currentIndex + 1}/${stages.length}: ${stages[currentIndex]?.process_name}`}
+          </Text>
+        </View>
+        <Ionicons
+          name={expanded ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#6b7280"
+        />
+      </TouchableOpacity>
+
+      {/* Progress bar luôn hiển thị */}
+      <View style={tlStyles.progressBarBg}>
+        <View
+          style={[
+            tlStyles.progressBarFill,
+            { width: `${progressPercent}%` as any },
+          ]}
+        />
+      </View>
+      <Text style={tlStyles.progressText}>
+        {finishedCount}/{stages.length} công đoạn hoàn thành
+      </Text>
+
+      {/* Danh sách công đoạn — chỉ hiện khi expanded */}
+      {expanded && (
+        <View style={tlStyles.stageList}>
+          {stages.map((stage, index) => {
+            const cfg = getStatusConfig(stage.status);
+            const isCurrent = index === currentIndex;
+            const isLast = index === stages.length - 1;
+            const startDate = formatShortDate(stage.start_time);
+            const endDate = formatShortDate(stage.end_time);
+
+            return (
+              <View key={stage.task_id} style={tlStyles.stageRow}>
+                {/* Cột trái: dot + line */}
+                <View style={tlStyles.dotCol}>
+                  <View
+                    style={[
+                      tlStyles.dot,
+                      { backgroundColor: cfg.bg },
+                      isCurrent && tlStyles.dotCurrent,
+                    ]}
+                  >
+                    {stage.status === "Finished" ? (
+                      <Ionicons name="checkmark" size={13} color="#fff" />
+                    ) : isCurrent ? (
+                      <View style={tlStyles.dotInnerPulse} />
+                    ) : (
+                      <View style={tlStyles.dotInnerEmpty} />
+                    )}
+                  </View>
+                  {!isLast && (
+                    <View
+                      style={[
+                        tlStyles.connector,
+                        {
+                          backgroundColor:
+                            stage.status === "Finished" ? "#16a34a" : "#e5e7eb",
+                        },
+                      ]}
+                    />
+                  )}
+                </View>
+
+                {/* Cột phải: nội dung */}
+                <View
+                  style={[
+                    tlStyles.stageContent,
+                    isLast && { paddingBottom: 0 },
+                  ]}
+                >
+                  <View style={tlStyles.stageHeaderRow}>
+                    <Text
+                      style={[
+                        tlStyles.stageName,
+                        isCurrent && tlStyles.stageNameCurrent,
+                      ]}
+                    >
+                      {stage.seq_num}. {stage.process_name}
+                    </Text>
+                    {isCurrent && (
+                      <View style={tlStyles.currentBadge}>
+                        <Text style={tlStyles.currentBadgeText}>HIỆN TẠI</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Text
+                    style={[
+                      tlStyles.stageStatus,
+                      { color: cfg.bg === "#e5e7eb" ? "#9ca3af" : cfg.bg },
+                    ]}
+                  >
+                    {cfg.label}
+                  </Text>
+
+                  {startDate || stage.output_product?.quantity ? (
+                    <Text style={tlStyles.stageMeta}>
+                      {startDate
+                        ? `${startDate}${endDate && endDate !== startDate ? " → " + endDate : ""} · `
+                        : ""}
+                      {stage.output_product?.quantity?.toLocaleString("vi-VN")}{" "}
+                      {stage.output_product?.unit}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const tlStyles = StyleSheet.create({
+  container: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 12,
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: 6,
+    backgroundColor: "#16a34a",
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginBottom: 16,
+    textAlign: "right",
+  },
+  stageList: {},
+  stageRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  dotCol: {
+    alignItems: "center",
+    width: 28,
+    marginRight: 10,
+  },
+  dot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  dotCurrent: {
+    borderWidth: 2,
+    borderColor: "#f59e0b",
+  },
+  dotInnerPulse: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+  },
+  dotInnerEmpty: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#d1d5db",
+  },
+  connector: {
+    width: 2,
+    flex: 1,
+    minHeight: 24,
+  },
+  stageContent: {
+    flex: 1,
+    paddingBottom: 16,
+  },
+  stageHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  stageName: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  stageNameCurrent: {
+    color: "#111827",
+    fontWeight: "700",
+  },
+  currentBadge: {
+    backgroundColor: "#fef3c7",
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  currentBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#92400e",
+    letterSpacing: 0.5,
+  },
+  stageStatus: {
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  stageMeta: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginTop: 2,
+  },
+});
+
 export default function OrderDetail() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const { id } = useLocalSearchParams();
@@ -92,7 +405,6 @@ export default function OrderDetail() {
     setSuccessVisible(true);
   };
 
-  // ✅ FIX 1: stage là stages[0], dùng stage để truy cập output_product
   const stage = detail?.stages?.[0];
   const isStageFinished = stage?.status === "Finished";
   const isStageScheduled = stage?.status === "Scheduled";
@@ -140,29 +452,23 @@ export default function OrderDetail() {
   /*================ HANDLE INPUT =====================================*/
   const handleQuantityChange = (text: string) => {
     const cleaned = text.replace(/[^0-9]/g, "");
-
     if (cleaned === "") {
       setQuantity("");
       setQuantityError("");
       return;
     }
-
     let value = Number(cleaned);
-
     if (value <= 0) {
       setQuantityError("Số lượng phải lớn hơn 0");
       return;
     }
-
-    const max = (stage?.output_product.quantity ?? 0) * 2;
-
+    const max = stage?.output_product.quantity ?? 0;
     if (value > max) {
       setQuantityError(`Không được nhập tầm bậy`);
       value = max;
     } else {
       setQuantityError("");
     }
-
     setQuantity(String(value));
   };
 
@@ -173,12 +479,7 @@ export default function OrderDetail() {
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
         `https://amms-juaa.onrender.com/api/Productions/detail/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}`, Accept: "*/*" } },
       );
       const data = await res.json();
       setDetail(data);
@@ -200,10 +501,8 @@ export default function OrderDetail() {
         alert("Vui lòng nhập token");
         return;
       }
-
       setFinishLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
-
       const res = await fetch(
         "https://amms-juaa.onrender.com/api/Tasks/finish",
         {
@@ -215,10 +514,8 @@ export default function OrderDetail() {
           body: JSON.stringify({ token: manualToken }),
         },
       );
-
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Finish thất bại");
-
       setManualToken("");
       onFinishedRef.current();
       fetchDetail();
@@ -236,7 +533,6 @@ export default function OrderDetail() {
       if (!stage) return;
       setReadyLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
-
       const res = await fetch(
         "https://amms-juaa.onrender.com/api/Tasks/ready",
         {
@@ -249,7 +545,6 @@ export default function OrderDetail() {
           body: JSON.stringify({ task_id: stage.task_id }),
         },
       );
-
       const text = await res.text();
       let data;
       try {
@@ -257,12 +552,8 @@ export default function OrderDetail() {
       } catch {
         data = { message: text };
       }
-
-      if (!res.ok) {
+      if (!res.ok)
         throw new Error(data?.message || "Không thể bắt đầu công đoạn");
-      }
-
-      // Refresh detail after success
       fetchDetail();
     } catch (err: any) {
       console.log("Set ready error:", err);
@@ -276,10 +567,8 @@ export default function OrderDetail() {
   /*================== SignalR =========================*/
   useEffect(() => {
     let connection: signalR.HubConnection;
-
     const startSignalR = async () => {
       const token = await SecureStore.getItemAsync("jwt");
-
       connection = new signalR.HubConnectionBuilder()
         .withUrl("https://amms-juaa.onrender.com/hubs/realtime", {
           accessTokenFactory: () => token || "",
@@ -289,7 +578,6 @@ export default function OrderDetail() {
 
       connection.on("ProdUpdated", (data) => {
         console.log("ProdUpdated:", data);
-
         setDetail((prev) => {
           if (!prev) return prev;
           return {
@@ -299,7 +587,6 @@ export default function OrderDetail() {
             ),
           };
         });
-
         if (data.status === "Finished") {
           setQrVisible(false);
           setModalVisible(false);
@@ -307,8 +594,8 @@ export default function OrderDetail() {
         }
       });
 
-      connection.on("OrderUpdated", (data) => {
-        console.log("Realtime OrderUpdated:", data);
+      connection.on("update-ui", (data) => {
+        console.log("Realtime Updated:", data);
         fetchDetail();
       });
 
@@ -317,7 +604,6 @@ export default function OrderDetail() {
     };
 
     startSignalR();
-
     return () => {
       connection?.stop();
     };
@@ -334,29 +620,22 @@ export default function OrderDetail() {
   const createQr = async (): Promise<boolean> => {
     try {
       if (!stage) return false;
-
       if (stage.status === "Finished") {
         onFinishedRef.current();
         return false;
       }
-
       const defaultQty = stage?.output_product?.quantity ?? 0;
-
-      // nếu không nhập → dùng default
       const qty = quantity ? Number(quantity) : defaultQty;
-
       if (isNaN(qty)) {
         setErrorMessage("Số lượng không hợp lệ");
         setErrorVisible(true);
         return false;
       }
-
       if (qty <= 0) {
         setErrorMessage("Số lượng phải lớn hơn 0");
         setErrorVisible(true);
         return false;
       }
-
       if (quantityError) {
         setErrorMessage(quantityError);
         setErrorVisible(true);
@@ -364,13 +643,7 @@ export default function OrderDetail() {
       }
 
       const token = await SecureStore.getItemAsync("jwt");
-
-      const body = {
-        task_id: stage.task_id,
-        ttl_minutes: 10,
-        qty_good: qty,
-      };
-
+      const body = { task_id: stage.task_id, ttl_minutes: 10, qty_good: qty };
       const res = await fetch("https://amms-juaa.onrender.com/api/Tasks/qr", {
         method: "POST",
         headers: {
@@ -380,20 +653,14 @@ export default function OrderDetail() {
         },
         body: JSON.stringify(body),
       });
-
       const text = await res.text();
-
       let data;
       try {
         data = JSON.parse(text);
       } catch {
         throw new Error("Không parse được dữ liệu từ server");
       }
-
-      if (!res.ok) {
-        throw new Error(data?.message || "Tạo QR thất bại");
-      }
-
+      if (!res.ok) throw new Error(data?.message || "Tạo QR thất bại");
       if (stage.status === "Finished") {
         onFinishedRef.current();
         return false;
@@ -412,8 +679,8 @@ export default function OrderDetail() {
 
   /*================= UTIL =================*/
   const formatDate = (date?: string | null) => {
-    if (!date) return "--";
-    return new Date(date).toLocaleString("vi-VN");
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("vi-VN").split("T")[0];
   };
 
   const getStatusText = (status?: string) => {
@@ -479,7 +746,6 @@ export default function OrderDetail() {
         </Text>
       </View>
 
-      {/* ✅ FIX 5: Bọc content trong ScrollView để không bị cắt trên màn nhỏ */}
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {/* BACK */}
         <View style={styles.titleRow}>
@@ -533,10 +799,7 @@ export default function OrderDetail() {
               </Text>
             </View>
           </View>
-
           <View style={styles.metaDivider} />
-
-          {/* ✅ FIX 1+2: Sửa detail.stages.output_product → stage?.output_product */}
           <View style={styles.metaItem}>
             <Ionicons name="cube-outline" size={18} color="#2563eb" />
             <View style={{ marginLeft: 10 }}>
@@ -548,11 +811,11 @@ export default function OrderDetail() {
             </View>
           </View>
         </View>
+
         {/* READY PRINT FILE */}
         {detail.ready_print_file && (
           <View style={styles.fileBox}>
             <Text style={styles.fileLabel}>File in ấn</Text>
-
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => setPreviewVisible(true)}
@@ -562,10 +825,13 @@ export default function OrderDetail() {
                 style={styles.fileImage}
               />
             </TouchableOpacity>
-
             <Text style={styles.fileHint}>Nhấn vào để xem chi tiết</Text>
           </View>
         )}
+
+        {/* PROCESS TIMELINE */}
+        <ProcessTimeline stages={detail.stages} />
+
         {/* INFO BOX */}
         <View style={styles.infoBox}>
           <InfoRow
@@ -577,13 +843,11 @@ export default function OrderDetail() {
                 : "--"
             }
           />
-
           <InfoRow
             icon={<Feather name="calendar" size={18} color="#4b5563" />}
             label="Hạn hoàn thành"
             value={formatDate(stage?.planned_end_time)}
           />
-
           <InfoRow
             icon={
               <Ionicons name="play-circle-outline" size={20} color="#4b5563" />
@@ -593,7 +857,6 @@ export default function OrderDetail() {
               stage?.start_time ? formatDate(stage.start_time) : "Chưa bắt đầu"
             }
           />
-
           <InfoRow
             icon={
               <Ionicons name="stop-circle-outline" size={20} color="#4b5563" />
@@ -612,6 +875,7 @@ export default function OrderDetail() {
             noBorder
           />
         </View>
+
         {/* BUTTON */}
         {isStageFinished ? (
           <View style={styles.buttonFinished}>
@@ -657,7 +921,6 @@ export default function OrderDetail() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Nhập số lượng thành phẩm</Text>
-
             <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -666,11 +929,9 @@ export default function OrderDetail() {
               value={quantity}
               onChangeText={handleQuantityChange}
             />
-
             {quantityError ? (
               <Text style={styles.fieldError}>{quantityError}</Text>
             ) : null}
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
@@ -678,8 +939,6 @@ export default function OrderDetail() {
               >
                 <Text style={styles.cancelText}>Huỷ</Text>
               </TouchableOpacity>
-
-              {/* ✅ FIX 3: Xử lý đúng thứ tự — đóng modal SAU KHI createQr thành công */}
               <TouchableOpacity
                 style={[styles.okBtn, !!quantityError && styles.okBtnDisabled]}
                 disabled={!!quantityError}
@@ -702,7 +961,6 @@ export default function OrderDetail() {
             <Text style={styles.modalTitle}>
               QR Code {roleId ? `— ${getRoleName(roleId)}` : ""}
             </Text>
-
             {qrData && (
               <>
                 <View style={styles.qrWrapper}>
@@ -717,7 +975,6 @@ export default function OrderDetail() {
                 </View>
               </>
             )}
-
             <Text style={styles.manualLabel}>Hoặc nhập token thủ công:</Text>
             <TextInput
               style={styles.input}
@@ -726,7 +983,6 @@ export default function OrderDetail() {
               value={manualToken}
               onChangeText={setManualToken}
             />
-
             <TouchableOpacity
               style={[styles.okBtn, { width: "100%", marginTop: 4 }]}
               onPress={finishTask}
@@ -736,7 +992,6 @@ export default function OrderDetail() {
                 {finishLoading ? "Đang xử lý..." : "Xác nhận hoàn thành"}
               </Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.cancelBtn, { marginTop: 10, alignSelf: "center" }]}
               onPress={() => setQrVisible(false)}
@@ -810,6 +1065,8 @@ export default function OrderDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* IMAGE PREVIEW MODAL */}
       <Modal visible={previewVisible} transparent>
         <View style={styles.previewOverlay}>
           <TouchableOpacity
@@ -818,7 +1075,6 @@ export default function OrderDetail() {
           >
             <Ionicons name="close" size={32} color="#fff" />
           </TouchableOpacity>
-
           <Image
             source={{ uri: detail?.ready_print_file }}
             style={styles.previewImage}
@@ -878,7 +1134,6 @@ const infoRowStyles = StyleSheet.create({
 /*================= STYLE =================*/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -890,7 +1145,6 @@ const styles = StyleSheet.create({
   },
   logo: { width: 56, height: 38, resizeMode: "contain", marginRight: 10 },
   company: { flex: 1, fontSize: 12, color: "#374151", lineHeight: 18 },
-
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -908,7 +1162,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   pageTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
-
   orderHeader: { alignItems: "center", paddingVertical: 12 },
   orderId: {
     fontSize: 26,
@@ -927,7 +1180,6 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
   statusText: { fontSize: 13, fontWeight: "600" },
-
   infoBox: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
@@ -939,7 +1191,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-
   metaBox: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -967,8 +1218,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   metaValue: { fontSize: 14, fontWeight: "700", color: "#111827" },
-
-  /* ✅ FIX 5: Button màu xanh dương thay vì xanh neon #00ff00 */
   button: {
     flexDirection: "row",
     backgroundColor: "#2563eb",
@@ -988,7 +1237,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-
   readyButton: {
     flexDirection: "row",
     backgroundColor: "#f59e0b",
@@ -1002,7 +1250,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-
   buttonFinished: {
     flexDirection: "row",
     backgroundColor: "#16a34a",
@@ -1018,7 +1265,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -1042,7 +1288,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   modalSub: { fontSize: 12, color: "#6b7280", marginBottom: 16 },
-
   qrBox: {
     width: "88%",
     backgroundColor: "#fff",
@@ -1089,7 +1334,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 8,
   },
-
   input: {
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -1107,7 +1351,6 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 10,
   },
-
   modalButtons: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
   cancelBtn: {
     paddingVertical: 10,
@@ -1132,14 +1375,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     alignItems: "center",
   },
-
   fileLabel: {
     fontSize: 13,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 10,
   },
-
   fileImage: {
     width: width - 80,
     height: 180,
@@ -1148,22 +1389,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-
-  fileHint: {
-    marginTop: 8,
-    fontSize: 11,
-    color: "#6b7280",
-  },
-
+  fileHint: { marginTop: 8, fontSize: 11, color: "#6b7280" },
   previewOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  previewImage: {
-    width: "100%",
-    height: "80%",
-  },
+  previewImage: { width: "100%", height: "80%" },
 });

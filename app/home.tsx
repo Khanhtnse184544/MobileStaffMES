@@ -4,14 +4,14 @@ import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Dimensions,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -174,7 +174,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-
   /* ================= COLOR ================= */
 
   const FILTER_COLOR: Record<FilterKey, string> = {
@@ -294,8 +293,6 @@ export default function Home() {
 
   /* ================= COUNT ================= */
 
-
-
   /* ================= FILTER + SEARCH + SORT ================= */
 
   const filteredOrders = useMemo(() => {
@@ -365,8 +362,8 @@ export default function Home() {
   /* ================= UI ================= */
 
   const formatDate = (date?: string) => {
-    if (!date) return "--";
-    return new Date(date).toLocaleString("vi-VN");
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("vi-VN").split("T")[0];
   };
 
   const renderItem = ({ item }: { item: Order }) => {
@@ -489,8 +486,6 @@ export default function Home() {
           style={{ flex: 1, marginLeft: 8 }}
         />
       </View>
-
-
 
       <View style={styles.infoRow}>
         <Ionicons name="time-outline" size={18} />
