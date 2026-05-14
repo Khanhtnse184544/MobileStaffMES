@@ -35,7 +35,8 @@ type FilterKey =
 type CompletionStatus = "EARLY" | "ON_TIME" | "LATE" | "NONE";
 
 export type Order = {
-  order_id: number;
+  order_id: number | null;
+  prod_id: number;
   code: string;
   customer_name: string;
   product_name: string;
@@ -268,7 +269,7 @@ export default function Home() {
       const token = await SecureStore.getItemAsync("jwt");
 
       const res = await fetch(
-        "https://amms-juaa.onrender.com/api/Productions/get-all-production?page=1&pageSize=500",
+        "https://mmes-sep490-84gr.onrender.com/api/Productions/get-all-production?page=1&pageSize=500",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -278,12 +279,12 @@ export default function Home() {
 
       const data = await res.json();
 
-      // remove duplicate order_id
+      // remove duplicate prod_id
       const unique = Array.from(
-        new Map(data.data.map((o: Order) => [o.order_id, o])).values(),
-      );
+        new Map(data.data.map((o: Order) => [o.prod_id || o.order_id, o])).values(),
+      ) as Order[];
 
-      setOrders(data.data);
+      setOrders(unique);
     } catch (err) {
       console.log("Fetch error:", err);
     } finally {
@@ -339,7 +340,7 @@ export default function Home() {
     const handleRealtime = (data: any) => {
       setOrders((prev) =>
         prev.map((o) =>
-          o.order_id === data.request_id
+          o.order_id === data.request_id || o.prod_id === data.request_id
             ? { ...o, status: data.new_status }
             : o,
         ),
@@ -389,7 +390,10 @@ export default function Home() {
         onPress={() =>
           router.push({
             pathname: "/order/[id]",
-            params: { id: item.order_id },
+            params: {
+              id: item.order_id === null ? item.prod_id : item.order_id,
+              type: item.order_id === null ? "group" : "single",
+            },
           })
         }
       >
@@ -469,13 +473,16 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Image source={require("../assets/logo.png")} style={styles.logo} />
+        <Image
+          source={require("../assets/logo_removed.png")}
+          style={styles.logo}
+        />
         <Text style={styles.company}>
           Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
         </Text>
       </View>
 
-      <Text style={styles.title}>Nhân viên {role}</Text>
+      <Text style={styles.title}>Chuyên viên {role}</Text>
 
       <View style={styles.searchBox}>
         <Ionicons name="search-outline" size={18} />
@@ -496,7 +503,7 @@ export default function Home() {
 
       <FlatList
         data={filteredOrders}
-        keyExtractor={(item, index) => `${item.order_id}-${index}`}
+        keyExtractor={(item, index) => `${item.prod_id || item.order_id}-${index}`}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 100 }}
       />

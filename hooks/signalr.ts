@@ -5,7 +5,7 @@ let connection: signalR.HubConnection | null = null;
 export const getConnection = () => {
   if (!connection) {
     connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://amms-juaa.onrender.com/hubs/realtime")
+      .withUrl("https://mmes-sep490-84gr.onrender.com/hubs/realtime")
       //.withUrl("http://10.0.2.2:5233/hubs/realtime")
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Information)
