@@ -1,7 +1,8 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as signalR from "@microsoft/signalr";
-import { router, useLocalSearchParams } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
+import { router, useLocalSearchParams } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -435,12 +436,17 @@ export default function OrderDetail() {
   }>({});
 
   // Image capture state
-  const [capturedImages, setCapturedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [capturedImages, setCapturedImages] = useState<
+    ImagePicker.ImagePickerAsset[]
+  >([]);
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
   const [previewImageUri, setPreviewImageUri] = useState<string>("");
 
   // Reason state
   const [reason, setReason] = useState("");
+
+  // Token copy state
+  const [tokenCopied, setTokenCopied] = useState(false);
 
   const [roleId, setRoleId] = useState<number | null>(null);
 
@@ -487,14 +493,13 @@ export default function OrderDetail() {
   const isStageReady = stage?.status === "Ready";
 
   // Check if the previous stage is finished (or this is the first stage)
-  const currentStageIndex = detail?.stages?.findIndex(
-    (s) => s.task_id === stage?.task_id,
-  ) ?? -1;
+  const currentStageIndex =
+    detail?.stages?.findIndex((s) => s.task_id === stage?.task_id) ?? -1;
   const isPrevStageFinished =
     currentStageIndex <= 0 ||
     detail?.stages?.[currentStageIndex - 1]?.status === "Finished";
 
-  // ✅ Chỉ hiện file in ấn cho công đoạn Ralo (7) và In (9)
+  // ✅ Chỉ hiện file in ấn cho công đoạn In (9)
   const showPrintFile = roleId === 9;
 
   const getRoleName = (roleId?: number | null) => {
@@ -594,7 +599,10 @@ export default function OrderDetail() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Quyền truy cập", "Ứng dụng cần quyền truy cập camera để chụp ảnh báo cáo.");
+      Alert.alert(
+        "Quyền truy cập",
+        "Ứng dụng cần quyền truy cập camera để chụp ảnh báo cáo.",
+      );
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -610,7 +618,10 @@ export default function OrderDetail() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Quyền truy cập", "Ứng dụng cần quyền truy cập thư viện ảnh.");
+      Alert.alert(
+        "Quyền truy cập",
+        "Ứng dụng cần quyền truy cập thư viện ảnh.",
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -626,6 +637,13 @@ export default function OrderDetail() {
 
   const removeImage = (index: number) => {
     setCapturedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /*================= COPY TOKEN =================*/
+  const copyToken = async (token: string) => {
+    await Clipboard.setStringAsync(token);
+    setTokenCopied(true);
+    setTimeout(() => setTokenCopied(false), 2000);
   };
 
   /*================= FETCH DETAIL =================*/
@@ -644,27 +662,28 @@ export default function OrderDetail() {
       const data = await res.json();
 
       if (type === "group") {
-        const mappedStages = data.stages?.map((s: any) => ({
-          ...s,
-          input_materials:
-            s.input_materials?.map((m: any) => ({
-              name: m.name,
-              code: m.code,
-              quantity: m.estimated_qty,
-              unit: m.unit,
-            })) || [],
-          output_product:
-            s.outputs && s.outputs.length > 0
-              ? {
-                  name: s.outputs[0].name,
-                  code: s.outputs[0].code,
-                  quantity: s.outputs[0].estimated_qty,
-                  unit: s.outputs[0].unit,
-                }
-              : { name: "", code: "", quantity: 0, unit: "" },
-          qty_good: s.actual_output_qty,
-          qty_bad: 0,
-        })) || [];
+        const mappedStages =
+          data.stages?.map((s: any) => ({
+            ...s,
+            input_materials:
+              s.input_materials?.map((m: any) => ({
+                name: m.name,
+                code: m.code,
+                quantity: m.estimated_qty,
+                unit: m.unit,
+              })) || [],
+            output_product:
+              s.outputs && s.outputs.length > 0
+                ? {
+                    name: s.outputs[0].name,
+                    code: s.outputs[0].code,
+                    quantity: s.outputs[0].estimated_qty,
+                    unit: s.outputs[0].unit,
+                  }
+                : { name: "", code: "", quantity: 0, unit: "" },
+            qty_good: s.actual_output_qty,
+            qty_bad: 0,
+          })) || [];
 
         setDetail({
           ...data,
@@ -960,6 +979,7 @@ export default function OrderDetail() {
       }
 
       setQrData(data);
+      setTokenCopied(false);
       setQrVisible(true);
       setCapturedImages([]); // Clear images after success
       setReason(""); // Clear reason after success
@@ -1218,7 +1238,13 @@ export default function OrderDetail() {
             value={`${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.name ?? "--"}`}
           />
           <InfoRow
-            icon={<Ionicons name="checkmark-done-outline" size={18} color="#4b5563" />}
+            icon={
+              <Ionicons
+                name="checkmark-done-outline"
+                size={18}
+                color="#4b5563"
+              />
+            }
             label="Thành phẩm thực tế"
             value={
               stage?.qty_good != null && stage.qty_good > 0
@@ -1311,230 +1337,254 @@ export default function OrderDetail() {
       {/* INPUT MODAL */}
       <Modal transparent visible={modalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { maxHeight: '85%' }]}>
+          <View style={[styles.modalBox, { maxHeight: "85%" }]}>
             <Text style={styles.modalTitle}>
               Báo cáo công đoạn {stage?.process_name}
             </Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Nguyên liệu đầu vào — luôn hiển thị từ stage.input_materials */}
-            {stage?.input_materials && stage.input_materials.length > 0 && (
-              <View style={styles.sectionBlock}>
-                <Text style={styles.sectionLabel}>Nguyên liệu đầu vào</Text>
-                {/* TABLE HEADER */}
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.th, { flex: 2 }]}>Tên nguyên liệu</Text>
-                  <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
-                    Số lượng
-                  </Text>
-                  <Text style={[styles.th, { width: 60, textAlign: "center" }]}>
-                    Đơn vị
-                  </Text>
-                </View>
-                {/* TABLE BODY */}
-                {stage.input_materials.map((mat, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.tableRow,
-                      idx % 2 === 0 && { backgroundColor: "#f9fafb" },
-                    ]}
-                  >
-                    <Text style={[styles.td, { flex: 2 }]}>
-                      {mat.name || "Nguyên liệu"}
+              {/* Nguyên liệu đầu vào — luôn hiển thị từ stage.input_materials */}
+              {stage?.input_materials && stage.input_materials.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <Text style={styles.sectionLabel}>Nguyên liệu đầu vào</Text>
+                  {/* TABLE HEADER */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.th, { flex: 2 }]}>
+                      Tên nguyên liệu
+                    </Text>
+                    <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
+                      Số lượng
                     </Text>
                     <Text
+                      style={[styles.th, { width: 60, textAlign: "center" }]}
+                    >
+                      Đơn vị
+                    </Text>
+                  </View>
+                  {/* TABLE BODY */}
+                  {stage.input_materials.map((mat, idx) => (
+                    <View
+                      key={idx}
                       style={[
-                        styles.td,
-                        { flex: 1, textAlign: "center", fontWeight: "600" },
+                        styles.tableRow,
+                        idx % 2 === 0 && { backgroundColor: "#f9fafb" },
                       ]}
                     >
-                      {mat.quantity ?? 0}
-                    </Text>
-                    <Text
-                      style={[styles.td, { width: 60, textAlign: "center" }]}
-                    >
-                      {mat.unit || "--"}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
+                      <Text style={[styles.td, { flex: 2 }]}>
+                        {mat.name || "Nguyên liệu"}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.td,
+                          { flex: 1, textAlign: "center", fontWeight: "600" },
+                        ]}
+                      >
+                        {mat.quantity ?? 0}
+                      </Text>
+                      <Text
+                        style={[styles.td, { width: 60, textAlign: "center" }]}
+                      >
+                        {mat.unit || "--"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
 
-            {prepareLoading ? (
-              <ActivityIndicator
-                size="small"
-                color="#2563eb"
-                style={{ marginVertical: 16 }}
-              />
-            ) : (
-              <>
-                {/* MATERIALS SECTION (DƯ) */}
-                {qrPrepare &&
-                  qrPrepare.consumable_materials.filter(
-                    (mat) =>
-                      !(
-                        roleId === 7 &&
-                        mat.material_name.toLowerCase().includes("kẽm")
-                      ),
-                  ).length > 0 && (
-                    <View style={styles.sectionBlock}>
-                      <Text style={styles.sectionLabel}>Nguyên liệu dư</Text>
-                      {qrPrepare.consumable_materials
-                        .filter(
-                          (mat) =>
-                            !(
-                              roleId === 7 &&
-                              mat.material_name.toLowerCase().includes("kẽm")
-                            ),
-                        )
-                        .map((mat) => (
-                          <View
-                            key={mat.material_id}
-                            style={styles.materialRow}
-                          >
-                            <View style={styles.materialLabelRow}>
-                              <Text style={styles.materialName}>
-                                {mat.material_name}
-                              </Text>
-                              <Text style={styles.materialHint}>
-                                Đã xuất: {mat.estimated_input_qty} {mat.unit}
-                              </Text>
+              {prepareLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#2563eb"
+                  style={{ marginVertical: 16 }}
+                />
+              ) : (
+                <>
+                  {/* MATERIALS SECTION (DƯ) */}
+                  {qrPrepare &&
+                    qrPrepare.consumable_materials.filter(
+                      (mat) =>
+                        !(
+                          roleId === 7 &&
+                          mat.material_name.toLowerCase().includes("kẽm")
+                        ),
+                    ).length > 0 && (
+                      <View style={styles.sectionBlock}>
+                        <Text style={styles.sectionLabel}>Nguyên liệu dư</Text>
+                        {qrPrepare.consumable_materials
+                          .filter(
+                            (mat) =>
+                              !(
+                                roleId === 7 &&
+                                mat.material_name.toLowerCase().includes("kẽm")
+                              ),
+                          )
+                          .map((mat) => (
+                            <View
+                              key={mat.material_id}
+                              style={styles.materialRow}
+                            >
+                              <View style={styles.materialLabelRow}>
+                                <Text style={styles.materialName}>
+                                  {mat.material_name}
+                                </Text>
+                                <Text style={styles.materialHint}>
+                                  Đã xuất: {mat.estimated_input_qty} {mat.unit}
+                                </Text>
+                              </View>
+                              <TextInput
+                                style={[
+                                  styles.input,
+                                  materialErrors[mat.material_id]
+                                    ? styles.inputError
+                                    : null,
+                                ]}
+                                keyboardType="numeric"
+                                placeholder={`Nhập lượng dư (Mặc định: 0)`}
+                                placeholderTextColor="#9ca3af"
+                                value={materialQtys[mat.material_id] ?? ""}
+                                onChangeText={(text) =>
+                                  handleMaterialQtyChange(
+                                    mat.material_id,
+                                    mat.estimated_input_qty,
+                                    text,
+                                  )
+                                }
+                              />
+                              {materialErrors[mat.material_id] ? (
+                                <Text style={styles.fieldError}>
+                                  {materialErrors[mat.material_id]}
+                                </Text>
+                              ) : null}
                             </View>
-                            <TextInput
-                              style={[
-                                styles.input,
-                                materialErrors[mat.material_id]
-                                  ? styles.inputError
-                                  : null,
-                              ]}
-                              keyboardType="numeric"
-                              placeholder={`Nhập lượng dư (Mặc định: 0)`}
-                              placeholderTextColor="#9ca3af"
-                              value={materialQtys[mat.material_id] ?? ""}
-                              onChangeText={(text) =>
-                                handleMaterialQtyChange(
-                                  mat.material_id,
-                                  mat.estimated_input_qty,
-                                  text,
-                                )
-                              }
-                            />
-                            {materialErrors[mat.material_id] ? (
-                              <Text style={styles.fieldError}>
-                                {materialErrors[mat.material_id]}
-                              </Text>
-                            ) : null}
+                          ))}
+                      </View>
+                    )}
+
+                  {/* QUANTITY SECTION */}
+                  <View style={styles.sectionBlock}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Text style={styles.sectionLabel}>
+                        Số lượng thành phẩm
+                      </Text>
+
+                      <Text style={styles.unitText}>
+                        Đơn vị tính: {stage?.output_product?.unit}
+                      </Text>
+                    </View>
+
+                    <TextInput
+                      style={[
+                        styles.input,
+                        quantityError ? styles.inputError : null,
+                        { textAlign: "right" },
+                      ]}
+                      keyboardType="numeric"
+                      placeholder={`Mặc định: ${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.unit ?? "sp"}`}
+                      placeholderTextColor="#9ca3af"
+                      value={quantity}
+                      onChangeText={handleQuantityChange}
+                    />
+
+                    {quantityError ? (
+                      <Text style={styles.fieldError}>{quantityError}</Text>
+                    ) : null}
+                  </View>
+
+                  {/* IMAGE CAPTURE SECTION */}
+                  <View style={styles.sectionBlock}>
+                    <Text style={styles.sectionLabel}>Ảnh báo cáo</Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: "#6b7280",
+                        marginBottom: 10,
+                      }}
+                    >
+                      Chụp ảnh sản phẩm / công đoạn để báo cáo
+                    </Text>
+
+                    {/* Camera & Gallery buttons */}
+                    <View style={imgStyles.btnRow}>
+                      <TouchableOpacity
+                        style={imgStyles.captureBtn}
+                        onPress={takePhoto}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="camera" size={20} color="#fff" />
+                        <Text style={imgStyles.captureBtnText}>Chụp ảnh</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          imgStyles.captureBtn,
+                          { backgroundColor: "#6366f1" },
+                        ]}
+                        onPress={pickImage}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="images" size={20} color="#fff" />
+                        <Text style={imgStyles.captureBtnText}>Thư viện</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Image thumbnails */}
+                    {capturedImages.length > 0 && (
+                      <View style={imgStyles.thumbRow}>
+                        {capturedImages.map((img, idx) => (
+                          <View key={idx} style={imgStyles.thumbWrap}>
+                            <TouchableOpacity
+                              activeOpacity={0.9}
+                              onPress={() => {
+                                setPreviewImageUri(img.uri);
+                                setImagePreviewVisible(true);
+                              }}
+                            >
+                              <Image
+                                source={{ uri: img.uri }}
+                                style={imgStyles.thumb}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={imgStyles.removeBtn}
+                              onPress={() => removeImage(idx)}
+                            >
+                              <Ionicons
+                                name="close-circle"
+                                size={22}
+                                color="#ef4444"
+                              />
+                            </TouchableOpacity>
                           </View>
                         ))}
-                    </View>
-                  )}
+                      </View>
+                    )}
 
-                {/* QUANTITY SECTION */}
-                <View style={styles.sectionBlock}>
-                  <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionLabel}>Số lượng thành phẩm</Text>
-
-                    <Text style={styles.unitText}>
-                      Đơn vị tính: {stage?.output_product?.unit}
-                    </Text>
+                    {capturedImages.length > 0 && (
+                      <Text
+                        style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}
+                      >
+                        {capturedImages.length} ảnh đã chọn
+                      </Text>
+                    )}
                   </View>
 
-                  <TextInput
-                    style={[
-                      styles.input,
-                      quantityError ? styles.inputError : null,
-                      { textAlign: "right" },
-                    ]}
-                    keyboardType="numeric"
-                    placeholder={`Mặc định: ${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.unit ?? "sp"}`}
-                    placeholderTextColor="#9ca3af"
-                    value={quantity}
-                    onChangeText={handleQuantityChange}
-                  />
-
-                  {quantityError ? (
-                    <Text style={styles.fieldError}>{quantityError}</Text>
-                  ) : null}
-                </View>
-
-                {/* IMAGE CAPTURE SECTION */}
-                <View style={styles.sectionBlock}>
-                  <Text style={styles.sectionLabel}>Ảnh báo cáo</Text>
-                  <Text style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
-                    Chụp ảnh sản phẩm / công đoạn để báo cáo
-                  </Text>
-
-                  {/* Camera & Gallery buttons */}
-                  <View style={imgStyles.btnRow}>
-                    <TouchableOpacity
-                      style={imgStyles.captureBtn}
-                      onPress={takePhoto}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="camera" size={20} color="#fff" />
-                      <Text style={imgStyles.captureBtnText}>Chụp ảnh</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[imgStyles.captureBtn, { backgroundColor: "#6366f1" }]}
-                      onPress={pickImage}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="images" size={20} color="#fff" />
-                      <Text style={imgStyles.captureBtnText}>Thư viện</Text>
-                    </TouchableOpacity>
+                  {/* REASON SECTION */}
+                  <View style={styles.sectionBlock}>
+                    <Text style={styles.sectionLabel}>Ghi chú / Lý do</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        { minHeight: 60, textAlignVertical: "top" },
+                      ]}
+                      placeholder="Nhập lý do hoặc ghi chú (không bắt buộc)"
+                      placeholderTextColor="#9ca3af"
+                      value={reason}
+                      onChangeText={setReason}
+                      multiline
+                      numberOfLines={3}
+                    />
                   </View>
-
-                  {/* Image thumbnails */}
-                  {capturedImages.length > 0 && (
-                    <View style={imgStyles.thumbRow}>
-                      {capturedImages.map((img, idx) => (
-                        <View key={idx} style={imgStyles.thumbWrap}>
-                          <TouchableOpacity
-                            activeOpacity={0.9}
-                            onPress={() => {
-                              setPreviewImageUri(img.uri);
-                              setImagePreviewVisible(true);
-                            }}
-                          >
-                            <Image
-                              source={{ uri: img.uri }}
-                              style={imgStyles.thumb}
-                            />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={imgStyles.removeBtn}
-                            onPress={() => removeImage(idx)}
-                          >
-                            <Ionicons name="close-circle" size={22} color="#ef4444" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {capturedImages.length > 0 && (
-                    <Text style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-                      {capturedImages.length} ảnh đã chọn
-                    </Text>
-                  )}
-                </View>
-
-                {/* REASON SECTION */}
-                <View style={styles.sectionBlock}>
-                  <Text style={styles.sectionLabel}>Ghi chú / Lý do</Text>
-                  <TextInput
-                    style={[styles.input, { minHeight: 60, textAlignVertical: "top" }]}
-                    placeholder="Nhập lý do hoặc ghi chú (không bắt buộc)"
-                    placeholderTextColor="#9ca3af"
-                    value={reason}
-                    onChangeText={setReason}
-                    multiline
-                    numberOfLines={3}
-                  />
-                </View>
-              </>
-            )}
+                </>
+              )}
             </ScrollView>
 
             <View style={styles.modalButtons}>
@@ -1566,50 +1616,101 @@ export default function OrderDetail() {
         </View>
       </Modal>
 
-      {/* QR MODAL */}
+      {/* QR MODAL — fixed with ScrollView + copy token */}
       <Modal transparent visible={qrVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.qrBox}>
             <Text style={styles.modalTitle}>
               QR Code {roleId ? `— ${getRoleName(roleId)}` : ""}
             </Text>
-            {qrData && (
-              <>
-                <View style={styles.qrWrapper}>
-                  <QRCode value={qrData.token} size={200} />
-                </View>
-                <Text style={styles.qrQty}>
-                  Số lượng: {qrData.qty_good_used} {stage?.output_product.unit}
-                </Text>
-                <View style={styles.tokenBox}>
-                  <Text style={styles.tokenLabel}>Mã xác nhận</Text>
-                  <Text style={styles.tokenValue}>{qrData.token}</Text>
-                </View>
-              </>
-            )}
-            <Text style={styles.manualLabel}>Hoặc nhập token thủ công:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập token nếu scan lỗi..."
-              placeholderTextColor="#9ca3af"
-              value={manualToken}
-              onChangeText={setManualToken}
-            />
-            <TouchableOpacity
-              style={[styles.okBtn, { width: "100%", marginTop: 4 }]}
-              onPress={finishTask}
-              disabled={finishLoading}
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ alignItems: "center", paddingBottom: 8 }}
             >
-              <Text style={[styles.okText, { textAlign: "center" }]}>
-                {finishLoading ? "Đang xử lý..." : "Xác nhận hoàn thành"}
+              {qrData && (
+                <>
+                  <View style={styles.qrWrapper}>
+                    <QRCode value={qrData.token} size={200} />
+                  </View>
+
+                  <Text style={styles.qrQty}>
+                    Số lượng: {qrData.qty_good_used}{" "}
+                    {stage?.output_product.unit}
+                  </Text>
+
+                  {/* TOKEN BOX — truncated + copy button */}
+                  <View style={styles.tokenBox}>
+                    <Text style={styles.tokenLabel}>Mã xác nhận</Text>
+                    <View style={styles.tokenRow}>
+                      <Text
+                        style={styles.tokenValue}
+                        numberOfLines={1}
+                        ellipsizeMode="middle"
+                      >
+                        {qrData.token}
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.copyBtn,
+                          tokenCopied && styles.copyBtnSuccess,
+                        ]}
+                        onPress={() => copyToken(qrData.token)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons
+                          name={tokenCopied ? "checkmark" : "copy-outline"}
+                          size={16}
+                          color={tokenCopied ? "#16a34a" : "#2563eb"}
+                        />
+                        <Text
+                          style={[
+                            styles.copyBtnText,
+                            tokenCopied && { color: "#16a34a" },
+                          ]}
+                        >
+                          {tokenCopied ? "Đã copy" : "Copy"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              <Text
+                style={[
+                  styles.manualLabel,
+                  { alignSelf: "flex-start", width: "100%" },
+                ]}
+              >
+                Hoặc nhập token thủ công:
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.cancelBtn, { marginTop: 10, alignSelf: "center" }]}
-              onPress={() => setQrVisible(false)}
-            >
-              <Text style={styles.cancelText}>Đóng</Text>
-            </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập token nếu scan lỗi..."
+                placeholderTextColor="#9ca3af"
+                value={manualToken}
+                onChangeText={setManualToken}
+              />
+              <TouchableOpacity
+                style={[styles.okBtn, { width: "100%", marginTop: 4 }]}
+                onPress={finishTask}
+                disabled={finishLoading}
+              >
+                <Text style={[styles.okText, { textAlign: "center" }]}>
+                  {finishLoading ? "Đang xử lý..." : "Xác nhận hoàn thành"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.cancelBtn,
+                  { marginTop: 10, alignSelf: "center" },
+                ]}
+                onPress={() => setQrVisible(false)}
+              >
+                <Text style={styles.cancelText}>Đóng</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1966,10 +2067,10 @@ const styles = StyleSheet.create({
   },
   qrBox: {
     width: "88%",
+    maxHeight: "85%",
     backgroundColor: "#fff",
     padding: 24,
     borderRadius: 16,
-    alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -1994,15 +2095,45 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     width: "100%",
-    alignItems: "center",
     marginBottom: 12,
   },
-  tokenLabel: { fontSize: 11, color: "#9ca3af", marginBottom: 4 },
+  tokenLabel: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  tokenRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   tokenValue: {
+    flex: 1,
     fontSize: 13,
     fontWeight: "700",
     color: "#2563eb",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+  },
+  copyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+  copyBtnSuccess: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  copyBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2563eb",
   },
   manualLabel: {
     fontSize: 12,

@@ -281,7 +281,9 @@ export default function Home() {
 
       // remove duplicate prod_id
       const unique = Array.from(
-        new Map(data.data.map((o: Order) => [o.prod_id || o.order_id, o])).values(),
+        new Map(
+          data.data.map((o: Order) => [o.prod_id || o.order_id, o]),
+        ).values(),
       ) as Order[];
 
       setOrders(unique);
@@ -303,8 +305,8 @@ export default function Home() {
         if (!searchText) return true;
         const text = searchText.toLowerCase();
         return (
-          o.code.toLowerCase().includes(text) ||
-          o.product_name.toLowerCase().includes(text)
+          //o.code.toLowerCase().includes(text) ||
+          o.prod_id.toString().includes(text)
         );
       })
       .sort((a, b) => {
@@ -410,7 +412,7 @@ export default function Home() {
             </Text>
           )}
           <Text style={styles.orderId}>
-            # {item.code} {isDisabled && "🔒"}
+            Lệnh: #{item.prod_id} {isDisabled && "🔒"}
           </Text>
 
           <Text
@@ -487,7 +489,7 @@ export default function Home() {
       <View style={styles.searchBox}>
         <Ionicons name="search-outline" size={18} />
         <TextInput
-          placeholder="Tìm mã đơn, sản phẩm..."
+          placeholder="Tìm mã lệnh"
           value={searchText}
           onChangeText={setSearchText}
           style={{ flex: 1, marginLeft: 8 }}
@@ -497,13 +499,15 @@ export default function Home() {
       <View style={styles.infoRow}>
         <Ionicons name="time-outline" size={18} />
         <Text style={styles.infoText}>
-          Có {filteredOrders.length} đơn cần {role}
+          Có {filteredOrders.length} lệnh {role} cần sản xuất
         </Text>
       </View>
 
       <FlatList
         data={filteredOrders}
-        keyExtractor={(item, index) => `${item.prod_id || item.order_id}-${index}`}
+        keyExtractor={(item, index) =>
+          `${item.prod_id || item.order_id}-${index}`
+        }
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
