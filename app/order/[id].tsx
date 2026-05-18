@@ -88,6 +88,11 @@ type QrPrepare = {
   suggested_qty: number;
   consumable_materials: ConsumableMaterial[];
   reference_inputs: any[];
+  is_group_production?: boolean;
+  allow_manual_input?: boolean;
+  can_use_manual_input?: boolean;
+  manual_input_optional?: boolean;
+  production_output_unit?: string;
 };
 
 /*================= PROCESS TIMELINE COMPONENT =================*/
@@ -428,9 +433,12 @@ export default function OrderDetail() {
   // QR Prepare state
   const [qrPrepare, setQrPrepare] = useState<QrPrepare | null>(null);
   const [prepareLoading, setPrepareLoading] = useState(false);
-  const [materialQtys, setMaterialQtys] = useState<{ [id: number]: string }>(
-    {},
-  );
+  const [materialLeftQtys, setMaterialLeftQtys] = useState<{ [id: number]: string }>({});
+  const [materialUsedQtys, setMaterialUsedQtys] = useState<{ [id: number]: string }>({});
+  const [refUsedQtys, setRefUsedQtys] = useState<{ [code: string]: string }>({});
+  const [refLeftQtys, setRefLeftQtys] = useState<{ [code: string]: string }>({});
+  const [qtyBad, setQtyBad] = useState("0");
+  const [useManualInputToggle, setUseManualInputToggle] = useState(false);
   const [materialErrors, setMaterialErrors] = useState<{
     [id: number]: string;
   }>({});
@@ -483,10 +491,9 @@ export default function OrderDetail() {
   };
 
   const processName = getProcessNameByRole(roleId);
-  const stage =
-    (processName
-      ? detail?.stages?.find((s) => s.process_name === processName)
-      : null) ?? detail?.stages?.[0];
+  const stage = processName
+    ? detail?.stages?.find((s) => s.process_name === processName)
+    : null;
   const isStageFinished = stage?.status === "Finished";
   const isStageScheduled = stage?.status === "Scheduled";
   const isStageUnassigned = stage?.status === "Unassigned";
@@ -501,6 +508,9 @@ export default function OrderDetail() {
 
   // ✅ Chỉ hiện file in ấn cho công đoạn In (9)
   const showPrintFile = roleId === 9;
+
+  const mustManual = qrPrepare?.is_group_production === true || qrPrepare?.allow_manual_input === true;
+  const isManual = mustManual || (qrPrepare?.can_use_manual_input === true && qrPrepare?.manual_input_optional === true && useManualInputToggle);
 
   const getRoleName = (roleId?: number | null) => {
     switch (roleId) {
@@ -552,9 +562,9 @@ export default function OrderDetail() {
       setQuantityError("Số lượng phải lớn hơn 0");
       return;
     }
-    const max = stage?.output_product.quantity ?? 0;
+    const max = qrPrepare?.max_allowed && qrPrepare.max_allowed > 0 ? qrPrepare.max_allowed : (stage?.output_product.quantity ?? 99999999);
     if (value > max) {
-      setQuantityError(`Không được nhập tầm bậy`);
+      setQuantityError(`Số lượng không được vượt quá ${max}`);
       value = max;
     } else {
       setQuantityError("");
@@ -568,19 +578,19 @@ export default function OrderDetail() {
     estimatedQty: number,
     text: string,
   ) => {
-    const cleaned = text.replace(/[^0-9]/g, "");
+    const cleaned = text.replace(/[^0-9.]/g, "");
     if (cleaned === "") {
-      setMaterialQtys((prev) => ({ ...prev, [materialId]: "" }));
+      setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: "" }));
       setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
       return;
     }
     let value = Number(cleaned);
-    if (value < 0) {
+    if (isNaN(value) || value < 0) {
       setMaterialErrors((prev) => ({
         ...prev,
         [materialId]: "Số lượng không hợp lệ",
       }));
-      setMaterialQtys((prev) => ({ ...prev, [materialId]: cleaned }));
+      setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: cleaned }));
       return;
     }
     if (value > estimatedQty) {
@@ -592,7 +602,7 @@ export default function OrderDetail() {
     } else {
       setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
     }
-    setMaterialQtys((prev) => ({ ...prev, [materialId]: String(value) }));
+    setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: String(value) }));
   };
 
   /*================= IMAGE CAPTURE =================*/
@@ -720,12 +730,31 @@ export default function OrderDetail() {
       setQrPrepare(data);
 
       // Prefill material quantities with empty
-      const initQtys: { [id: number]: string } = {};
+      const initLeft: { [id: number]: string } = {};
+      const initUsed: { [id: number]: string } = {};
       data.consumable_materials.forEach((m) => {
-        initQtys[m.material_id] = "";
+        initLeft[m.material_id] = "";
+        initUsed[m.material_id] = "";
       });
-      setMaterialQtys(initQtys);
+      setMaterialLeftQtys(initLeft);
+      setMaterialUsedQtys(initUsed);
+
+      const initRefUsed: { [code: string]: string } = {};
+      const initRefLeft: { [code: string]: string } = {};
+      data.reference_inputs?.forEach((x) => {
+        initRefUsed[x.input_code] = String(x.estimated_qty ?? 0);
+        initRefLeft[x.input_code] = "0";
+      });
+      setRefUsedQtys(initRefUsed);
+      setRefLeftQtys(initRefLeft);
+
+      setQtyBad("0");
+      setUseManualInputToggle(false);
       setMaterialErrors({});
+
+      if (data.suggested_qty && data.suggested_qty > 0) {
+        setQuantity(String(data.suggested_qty));
+      }
     } catch (err) {
       console.log("Fetch qr-prepare error:", err);
     } finally {
@@ -867,28 +896,73 @@ export default function OrderDetail() {
       // Validate materials
       if (qrPrepare && qrPrepare.consumable_materials.length > 0) {
         for (const mat of qrPrepare.consumable_materials) {
-          const val = materialQtys[mat.material_id];
-          if (val && val !== "") {
-            if (Number(val) < 0) {
-              setMaterialErrors((prev) => ({
-                ...prev,
-                [mat.material_id]: "Số lượng không hợp lệ",
-              }));
-              return false;
+          if (roleId === 7 && mat.material_name.toLowerCase().includes("kẽm")) {
+            continue;
+          }
+          if (isManual) {
+            const usedVal = materialUsedQtys[mat.material_id];
+            const leftVal = materialLeftQtys[mat.material_id];
+            if (usedVal && usedVal !== "") {
+              if (Number(usedVal) < 0) {
+                setMaterialErrors((prev) => ({
+                  ...prev,
+                  [mat.material_id]: "Số lượng đã dùng không hợp lệ",
+                }));
+                return false;
+              }
             }
-            if (Number(val) > mat.estimated_input_qty) {
-              setMaterialErrors((prev) => ({
-                ...prev,
-                [mat.material_id]: `Tối đa ${mat.estimated_input_qty}`,
-              }));
-              return false;
+            if (leftVal && leftVal !== "") {
+              if (Number(leftVal) < 0) {
+                setMaterialErrors((prev) => ({
+                  ...prev,
+                  [mat.material_id]: "Số lượng dư không hợp lệ",
+                }));
+                return false;
+              }
+            }
+          } else {
+            // Estimate mode
+            const val = materialLeftQtys[mat.material_id];
+            if (val && val !== "") {
+              if (Number(val) < 0) {
+                setMaterialErrors((prev) => ({
+                  ...prev,
+                  [mat.material_id]: "Số lượng không hợp lệ",
+                }));
+                return false;
+              }
+              if (Number(val) > mat.estimated_input_qty) {
+                setMaterialErrors((prev) => ({
+                  ...prev,
+                  [mat.material_id]: `Tối đa ${mat.estimated_input_qty}`,
+                }));
+                return false;
+              }
             }
           }
           if (materialErrors[mat.material_id]) return false;
         }
       }
 
-      const defaultQty = stage?.output_product?.quantity ?? 0;
+      // Validate reference inputs if in manual mode
+      if (isManual && qrPrepare?.reference_inputs && qrPrepare.reference_inputs.length > 0) {
+        for (const x of qrPrepare.reference_inputs) {
+          const usedVal = refUsedQtys[x.input_code];
+          const leftVal = refLeftQtys[x.input_code];
+          if (usedVal && Number(usedVal) < 0) {
+            setErrorMessage(`Số lượng BTP đã dùng của ${x.input_name} không hợp lệ`);
+            setErrorVisible(true);
+            return false;
+          }
+          if (leftVal && Number(leftVal) < 0) {
+            setErrorMessage(`Số lượng BTP dư của ${x.input_name} không hợp lệ`);
+            setErrorVisible(true);
+            return false;
+          }
+        }
+      }
+
+      const defaultQty = qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? 0;
       const qty = quantity ? Number(quantity) : defaultQty;
       if (isNaN(qty)) {
         setErrorMessage("Số lượng không hợp lệ");
@@ -906,39 +980,92 @@ export default function OrderDetail() {
         return false;
       }
 
+      if (isManual) {
+        if (Number(qtyBad || 0) < 0) {
+          setErrorMessage("Sản lượng hỏng không được nhỏ hơn 0");
+          setErrorVisible(true);
+          return false;
+        }
+      }
+
       const token = await SecureStore.getItemAsync("jwt");
 
       // Build materials array
       const materials =
-        qrPrepare?.consumable_materials.map((mat) => {
-          const qtyLeftStr = materialQtys[mat.material_id];
-          const qtyLeft =
-            qtyLeftStr === "" || qtyLeftStr === undefined
-              ? 0
-              : Number(qtyLeftStr);
+        qrPrepare?.consumable_materials
+          .filter(
+            (mat) =>
+              !(
+                roleId === 7 &&
+                mat.material_name.toLowerCase().includes("kẽm")
+              ),
+          )
+          .map((mat) => {
+            if (isManual) {
+              const usedStr = materialUsedQtys[mat.material_id];
+              const leftStr = materialLeftQtys[mat.material_id];
+              const qtyUsed = usedStr === "" || usedStr === undefined ? 0 : Number(usedStr);
+              const qtyLeft = leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
+              return {
+                material_id: mat.material_id,
+                quantity_used: qtyUsed,
+                quantity_left: qtyLeft,
+                is_stock: qtyLeft > 0,
+              };
+            } else {
+              // SINGLE Estimate
+              const leftStr = materialLeftQtys[mat.material_id];
+              const qtyLeft = leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
+              return {
+                material_id: mat.material_id,
+                quantity_used: 0,
+                quantity_left: qtyLeft,
+                is_stock: qtyLeft > 0,
+              };
+            }
+          }) ?? [];
+
+      // Build reference inputs array
+      const referenceInputs =
+        qrPrepare?.reference_inputs?.map((x) => {
+          const usedStr = refUsedQtys[x.input_code];
+          const leftStr = refLeftQtys[x.input_code];
+          const qtyUsed = usedStr === "" || usedStr === undefined ? 0 : Number(usedStr);
+          const qtyLeft = leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
           return {
-            material_id: mat.material_id,
-            quantity_used: 0,
-            is_stock: true,
+            input_code: x.input_code,
+            input_name: x.input_name,
+            unit: x.unit,
+            quantity_used: qtyUsed,
             quantity_left: qtyLeft,
           };
         }) ?? [];
 
+      // Build outputs array
+      const outputs = [{
+        output_code: qrPrepare?.process_code ?? stage?.process_code ?? "",
+        output_name: `BTP sau ${qrPrepare?.process_name ?? stage?.process_name ?? ""}`,
+        unit: qrPrepare?.production_output_unit ?? qrPrepare?.qty_unit ?? stage?.output_product?.unit ?? "",
+        quantity_good: qty,
+        quantity_bad: Number(qtyBad || 0),
+      }];
+
       // Build FormData for multipart/form-data
       const formData = new FormData();
       formData.append("task_id", String(stage.task_id));
-      formData.append("ttl_minutes", "10");
+      formData.append("ttl_minutes", "60");
       formData.append("qty_good", String(qty));
-      formData.append("use_manual_input", "false");
+      formData.append("use_manual_input", isManual ? "true" : "false");
 
       // Append reason if provided
-      if (reason.trim()) {
-        formData.append("reason", reason.trim());
-      }
+      formData.append("reason", reason.trim());
 
       // Append materials as JSON string
-      if (materials.length > 0) {
-        formData.append("materials_json", JSON.stringify(materials));
+      formData.append("materials_json", JSON.stringify(materials));
+
+      if (isManual) {
+        formData.append("reference_inputs_json", JSON.stringify(referenceInputs));
+        formData.append("outputs_json", JSON.stringify(outputs));
       }
 
       // Append captured images
@@ -1050,6 +1177,42 @@ export default function OrderDetail() {
     );
   }
 
+  /*================= ACCESS RESTRICTION =================*/
+  if (detail && !stage) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Image
+            source={require("../../assets/logo_removed.png")}
+            style={styles.logo}
+          />
+          <Text style={styles.company}>
+            Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
+          </Text>
+        </View>
+
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <View style={{ backgroundColor: "#fee2e2", padding: 16, borderRadius: 50, marginBottom: 16 }}>
+            <Ionicons name="lock-closed" size={40} color="#dc2626" />
+          </View>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: "#111827", textAlign: "center", marginBottom: 8 }}>
+            Không có quyền truy cập
+          </Text>
+          <Text style={{ fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 20, marginBottom: 24 }}>
+            Đơn hàng #{detail.order_code || id} không chứa công đoạn dành cho vai trò "{processName || "của bạn"}".
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: "#2563eb", paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, elevation: 2 }}
+            onPress={() => router.back()}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600" }}>Quay lại Trang chủ</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   /*================= UI =================*/
   return (
     <SafeAreaView style={styles.container}>
@@ -1073,12 +1236,12 @@ export default function OrderDetail() {
           >
             <Ionicons name="arrow-back" size={20} color="#2563eb" />
           </TouchableOpacity>
-          <Text style={styles.pageTitle}>Chi tiết đơn hàng</Text>
+          <Text style={styles.pageTitle}>Chi tiết lệnh sản xuất</Text>
         </View>
 
         {/* ORDER CODE + STATUS BADGE */}
         <View style={styles.orderHeader}>
-          <Text style={styles.orderId}>#{detail.order_code}</Text>
+          <Text style={styles.orderId}>#{stage?.task_id ?? "--"}</Text>
           <View
             style={[
               styles.statusBadge,
@@ -1399,8 +1562,141 @@ export default function OrderDetail() {
                 />
               ) : (
                 <>
-                  {/* MATERIALS SECTION (DƯ) */}
+                  {/* MANUAL TOGGLE / REQUIRED NOTICE */}
+                  {qrPrepare && qrPrepare.can_use_manual_input && qrPrepare.manual_input_optional && !mustManual && (
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#f0fdf4", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#bbf7d0", marginBottom: 16 }}>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>Báo cáo nhập tay</Text>
+                        <Text style={{ fontSize: 11, color: "#15803d", marginTop: 2 }}>Tùy chọn tự nhập tay vật tư, BTP công đoạn</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={{
+                          width: 48,
+                          height: 26,
+                          borderRadius: 13,
+                          backgroundColor: useManualInputToggle ? "#16a34a" : "#d1d5db",
+                          padding: 2,
+                          justifyContent: "center",
+                        }}
+                        onPress={() => setUseManualInputToggle(!useManualInputToggle)}
+                        activeOpacity={0.8}
+                      >
+                        <View
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            backgroundColor: "#fff",
+                            alignSelf: useManualInputToggle ? "flex-end" : "flex-start",
+                            shadowColor: "#000",
+                            shadowOpacity: 0.2,
+                            shadowRadius: 2,
+                            elevation: 2,
+                          }}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {mustManual && (
+                    <View style={{ backgroundColor: "#eff6ff", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#bfdbfe", marginBottom: 16 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#1e40af" }}>Chế độ nhập tay bắt buộc</Text>
+                      <Text style={{ fontSize: 11, color: "#1d4ed8", marginTop: 2 }}>
+                        Công đoạn {qrPrepare?.is_group_production ? "ghép" : "này"} yêu cầu nhập tay chi tiết vật tư, BTP đầu vào và đầu ra.
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* MATERIALS SECTION (MANUAL / ESTIMATE) */}
                   {qrPrepare &&
+                    isManual &&
+                    qrPrepare.consumable_materials.filter(
+                      (mat) =>
+                        !(
+                          roleId === 7 &&
+                          mat.material_name.toLowerCase().includes("kẽm")
+                        ),
+                    ).length > 0 && (
+                      <View style={styles.sectionBlock}>
+                        <Text style={styles.sectionLabel}>Báo cáo Nguyên vật liệu</Text>
+                        {qrPrepare.consumable_materials
+                          .filter(
+                            (mat) =>
+                              !(
+                                roleId === 7 &&
+                                mat.material_name.toLowerCase().includes("kẽm")
+                              ),
+                          )
+                          .map((mat) => (
+                            <View
+                              key={mat.material_id}
+                              style={{ backgroundColor: "#f9fafb", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#e5e7eb", marginBottom: 12 }}
+                            >
+                              <View style={styles.materialLabelRow}>
+                                <Text style={{ fontSize: 13, fontWeight: "700", color: "#111827" }}>
+                                  {mat.material_name}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: "#4b5563", fontWeight: "500" }}>
+                                  Định mức: {mat.estimated_input_qty} {mat.unit}
+                                </Text>
+                              </View>
+
+                              <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" }}>Lượng đã dùng</Text>
+                                  <TextInput
+                                    style={[
+                                      styles.input,
+                                      { backgroundColor: "#fff", marginBottom: 0 },
+                                      materialErrors[mat.material_id] ? styles.inputError : null,
+                                    ]}
+                                    keyboardType="numeric"
+                                    placeholder="Nhập lượng dùng"
+                                    placeholderTextColor="#9ca3af"
+                                    value={materialUsedQtys[mat.material_id] ?? ""}
+                                    onChangeText={(text) => {
+                                      const cleaned = text.replace(/[^0-9.]/g, "");
+                                      setMaterialUsedQtys((prev) => ({ ...prev, [mat.material_id]: cleaned }));
+                                      if (cleaned !== "" && Number(cleaned) > mat.estimated_input_qty) {
+                                        setMaterialErrors((prev) => ({ ...prev, [mat.material_id]: `Vượt quá định mức (${mat.estimated_input_qty})` }));
+                                      } else {
+                                        setMaterialErrors((prev) => ({ ...prev, [mat.material_id]: "" }));
+                                      }
+                                    }}
+                                  />
+                                </View>
+
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" }}>Lượng dư hoàn kho</Text>
+                                  <TextInput
+                                    style={[
+                                      styles.input,
+                                      { backgroundColor: "#fff", marginBottom: 0 },
+                                    ]}
+                                    keyboardType="numeric"
+                                    placeholder="Nhập lượng dư"
+                                    placeholderTextColor="#9ca3af"
+                                    value={materialLeftQtys[mat.material_id] ?? ""}
+                                    onChangeText={(text) => {
+                                      const cleaned = text.replace(/[^0-9.]/g, "");
+                                      setMaterialLeftQtys((prev) => ({ ...prev, [mat.material_id]: cleaned }));
+                                    }}
+                                  />
+                                </View>
+                              </View>
+
+                              {materialErrors[mat.material_id] ? (
+                                <Text style={[styles.fieldError, { marginTop: 4, marginBottom: 0 }]}>
+                                  {materialErrors[mat.material_id]}
+                                </Text>
+                              ) : null}
+                            </View>
+                          ))}
+                      </View>
+                    )}
+
+                  {qrPrepare &&
+                    !isManual &&
                     qrPrepare.consumable_materials.filter(
                       (mat) =>
                         !(
@@ -1441,7 +1737,7 @@ export default function OrderDetail() {
                                 keyboardType="numeric"
                                 placeholder={`Nhập lượng dư (Mặc định: 0)`}
                                 placeholderTextColor="#9ca3af"
-                                value={materialQtys[mat.material_id] ?? ""}
+                                value={materialLeftQtys[mat.material_id] ?? ""}
                                 onChangeText={(text) =>
                                   handleMaterialQtyChange(
                                     mat.material_id,
@@ -1460,33 +1756,109 @@ export default function OrderDetail() {
                       </View>
                     )}
 
+                  {/* REFERENCE INPUTS SECTION */}
+                  {isManual && qrPrepare && qrPrepare.reference_inputs && qrPrepare.reference_inputs.length > 0 && (
+                    <View style={styles.sectionBlock}>
+                      <Text style={styles.sectionLabel}>Bán thành phẩm đầu vào (BTP)</Text>
+                      {qrPrepare.reference_inputs.map((x) => (
+                        <View
+                          key={x.input_code}
+                          style={{ backgroundColor: "#f9fafb", padding: 12, borderRadius: 8, borderWidth: 1, borderColor: "#e5e7eb", marginBottom: 12 }}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: "#111827" }}>
+                            {x.input_name} ({x.input_code})
+                          </Text>
+                          <Text style={{ fontSize: 11, color: "#6b7280", marginTop: 2, marginBottom: 8 }}>
+                            Định mức ước lượng: {x.estimated_qty} {x.unit}
+                          </Text>
+
+                          <View style={{ flexDirection: "row", gap: 10 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" }}>Lượng đã dùng</Text>
+                              <TextInput
+                                style={[styles.input, { backgroundColor: "#fff", marginBottom: 0 }]}
+                                keyboardType="numeric"
+                                placeholder="Nhập lượng dùng"
+                                placeholderTextColor="#9ca3af"
+                                value={refUsedQtys[x.input_code] ?? ""}
+                                onChangeText={(text) => {
+                                  const cleaned = text.replace(/[^0-9.]/g, "");
+                                  setRefUsedQtys((prev) => ({ ...prev, [x.input_code]: cleaned }));
+                                }}
+                              />
+                            </View>
+
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" }}>Lượng dư</Text>
+                              <TextInput
+                                style={[styles.input, { backgroundColor: "#fff", marginBottom: 0 }]}
+                                keyboardType="numeric"
+                                placeholder="Nhập lượng dư"
+                                placeholderTextColor="#9ca3af"
+                                value={refLeftQtys[x.input_code] ?? ""}
+                                onChangeText={(text) => {
+                                  const cleaned = text.replace(/[^0-9.]/g, "");
+                                  setRefLeftQtys((prev) => ({ ...prev, [x.input_code]: cleaned }));
+                                }}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
                   {/* QUANTITY SECTION */}
                   <View style={styles.sectionBlock}>
                     <View style={styles.sectionHeaderRow}>
                       <Text style={styles.sectionLabel}>
-                        Số lượng thành phẩm
+                        Sản lượng Báo cáo
                       </Text>
-
                       <Text style={styles.unitText}>
-                        Đơn vị tính: {stage?.output_product?.unit}
+                        Đơn vị tính: {qrPrepare?.qty_unit ?? stage?.output_product?.unit}
                       </Text>
                     </View>
 
-                    <TextInput
-                      style={[
-                        styles.input,
-                        quantityError ? styles.inputError : null,
-                        { textAlign: "right" },
-                      ]}
-                      keyboardType="numeric"
-                      placeholder={`Mặc định: ${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.unit ?? "sp"}`}
-                      placeholderTextColor="#9ca3af"
-                      value={quantity}
-                      onChangeText={handleQuantityChange}
-                    />
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" }}>Sản lượng đạt</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            quantityError ? styles.inputError : null,
+                            { backgroundColor: "#fff", textAlign: "right", marginBottom: 0 },
+                          ]}
+                          keyboardType="numeric"
+                          placeholder={`Mặc định: ${qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? "--"}`}
+                          placeholderTextColor="#9ca3af"
+                          value={quantity}
+                          onChangeText={handleQuantityChange}
+                        />
+                      </View>
+
+                      {isManual && (
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" }}>Sản lượng hỏng</Text>
+                          <TextInput
+                            style={[
+                              styles.input,
+                              { backgroundColor: "#fff", textAlign: "right", marginBottom: 0 },
+                            ]}
+                            keyboardType="numeric"
+                            placeholder="Mặc định: 0"
+                            placeholderTextColor="#9ca3af"
+                            value={qtyBad}
+                            onChangeText={(text) => {
+                              const cleaned = text.replace(/[^0-9]/g, "");
+                              setQtyBad(cleaned);
+                            }}
+                          />
+                        </View>
+                      )}
+                    </View>
 
                     {quantityError ? (
-                      <Text style={styles.fieldError}>{quantityError}</Text>
+                      <Text style={[styles.fieldError, { marginTop: 4, marginBottom: 0 }]}>{quantityError}</Text>
                     ) : null}
                   </View>
 

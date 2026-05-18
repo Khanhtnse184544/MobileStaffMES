@@ -52,8 +52,14 @@ export type Order = {
 
 /* ================= CORE STATUS ================= */
 
-const getDisplayStatus = (item: Order) => {
-  const { production_status, stage_status } = item;
+const getDisplayStatus = (item: Order, userRole?: string) => {
+  const { production_status } = item;
+  const stage = userRole
+    ? item.stage_statuses?.find(
+        (s) => s.process_name?.toLowerCase() === userRole.toLowerCase(),
+      )
+    : null;
+  const stage_status = stage ? stage.status : item.stage_status;
 
   // Ẩn hoàn toàn các đơn đã hoàn thành production
   if (
@@ -87,8 +93,8 @@ const getDisplayStatus = (item: Order) => {
   return "UNKNOWN";
 };
 
-const getStatusText = (item: Order) => {
-  const display = getDisplayStatus(item);
+const getStatusText = (item: Order, userRole?: string) => {
+  const display = getDisplayStatus(item, userRole);
 
   switch (display) {
     case "PROCESSING":
@@ -106,8 +112,8 @@ const getStatusText = (item: Order) => {
   }
 };
 
-const getStatusColor = (item: Order) => {
-  const display = getDisplayStatus(item);
+const getStatusColor = (item: Order, userRole?: string) => {
+  const display = getDisplayStatus(item, userRole);
 
   switch (display) {
     case "PROCESSING":
@@ -127,8 +133,12 @@ const getStatusColor = (item: Order) => {
 
 /* ================= COMPLETION ================= */
 
-const getCompletionStatus = (item: Order): CompletionStatus => {
-  const stage = item.stage_statuses?.[0];
+const getCompletionStatus = (item: Order, userRole?: string): CompletionStatus => {
+  const stage = userRole
+    ? item.stage_statuses?.find(
+        (s) => s.process_name?.toLowerCase() === userRole.toLowerCase(),
+      )
+    : item.stage_statuses?.[0];
 
   if (!stage?.end_time) return "NONE";
 
@@ -229,10 +239,10 @@ export default function Home() {
 
   /* ================= PRIORITY ================= */
 
-  const getPriority = (item: Order): FilterKey => {
+  const getPriority = (item: Order, userRole?: string): FilterKey => {
     const now = new Date();
     const deadline = new Date(item.delivery_date);
-    const display = getDisplayStatus(item);
+    const display = getDisplayStatus(item, userRole);
 
     if (display === "UNASSIGNED") return "UNASSIGNED";
 
@@ -300,12 +310,20 @@ export default function Home() {
 
   const filteredOrders = useMemo(() => {
     return orders
-      .filter((o) => getDisplayStatus(o) !== "HIDDEN")
+      .filter((o) => getDisplayStatus(o, role) !== "HIDDEN")
+      .filter((o) => {
+        // Filter by role: at least one stage in stage_statuses must match the worker's role process_name
+        if (!role) return true;
+        
+        const hasRoleStage = o.stage_statuses?.some(
+          (s) => s.process_name?.toLowerCase() === role.toLowerCase()
+        );
+        return hasRoleStage;
+      })
       .filter((o) => {
         if (!searchText) return true;
         const text = searchText.toLowerCase();
         return (
-          //o.code.toLowerCase().includes(text) ||
           o.prod_id.toString().includes(text)
         );
       })
@@ -320,9 +338,9 @@ export default function Home() {
           PROCESSING: 7,
           DONE: 8,
         };
-        return priorityOrder[getPriority(a)] - priorityOrder[getPriority(b)];
+        return priorityOrder[getPriority(a, role)] - priorityOrder[getPriority(b, role)];
       });
-  }, [orders, searchText]);
+  }, [orders, searchText, role]);
 
   /* ================= EFFECT ================= */
 
@@ -370,11 +388,11 @@ export default function Home() {
   };
 
   const renderItem = ({ item }: { item: Order }) => {
-    const stage = item.stage_statuses?.[0];
-    const priority = getPriority(item);
-    const display = getDisplayStatus(item);
+    const stage = item.stage_statuses?.find((s) => s.process_name?.toLowerCase() === role.toLowerCase()) || item.stage_statuses?.[0];
+    const priority = getPriority(item, role);
+    const display = getDisplayStatus(item, role);
     const isDisabled = display === "SCHEDULED";
-    const completionStatus = getCompletionStatus(item);
+    const completionStatus = getCompletionStatus(item, role);
 
     return (
       <TouchableOpacity
@@ -441,11 +459,11 @@ export default function Home() {
             <Text style={styles.label}>Trạng thái</Text>
             <Text
               style={{
-                color: getStatusColor(item),
+                color: getStatusColor(item, role),
                 fontWeight: "bold",
               }}
             >
-              {getStatusText(item)}
+              {getStatusText(item, role)}
             </Text>
           </View>
         </View>
