@@ -184,6 +184,7 @@ export default function Home() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [activeSegment, setActiveSegment] = useState<"processing" | "completed">("processing");
 
   /* ================= COLOR ================= */
 
@@ -321,6 +322,14 @@ export default function Home() {
         return hasRoleStage;
       })
       .filter((o) => {
+        const display = getDisplayStatus(o, role);
+        if (activeSegment === "completed") {
+          return display === "DONE";
+        } else {
+          return display !== "DONE";
+        }
+      })
+      .filter((o) => {
         if (!searchText) return true;
         const text = searchText.toLowerCase();
         return (
@@ -340,7 +349,7 @@ export default function Home() {
         };
         return priorityOrder[getPriority(a, role)] - priorityOrder[getPriority(b, role)];
       });
-  }, [orders, searchText, role]);
+  }, [orders, searchText, role, activeSegment]);
 
   /* ================= EFFECT ================= */
 
@@ -514,10 +523,45 @@ export default function Home() {
         />
       </View>
 
+      <View style={styles.segmentContainer}>
+        <TouchableOpacity
+          style={[
+            styles.segmentButton,
+            activeSegment === "processing" && styles.segmentButtonActive,
+          ]}
+          onPress={() => setActiveSegment("processing")}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              activeSegment === "processing" && styles.segmentTextActive,
+            ]}
+          >
+            Đang sản xuất
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.segmentButton,
+            activeSegment === "completed" && styles.segmentButtonActive,
+          ]}
+          onPress={() => setActiveSegment("completed")}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              activeSegment === "completed" && styles.segmentTextActive,
+            ]}
+          >
+            Đã hoàn thành
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.infoRow}>
         <Ionicons name="time-outline" size={18} />
         <Text style={styles.infoText}>
-          Có {filteredOrders.length} lệnh {role} cần sản xuất
+          Có {filteredOrders.length} lệnh {role} {activeSegment === "processing" ? "cần sản xuất" : "đã hoàn thành"}
         </Text>
       </View>
 
@@ -683,5 +727,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
+  },
+
+  segmentContainer: {
+    flexDirection: "row",
+    backgroundColor: "#e4e4e7",
+    borderRadius: 8,
+    padding: 4,
+    marginHorizontal: 20,
+    marginTop: 15,
+  },
+
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 6,
+  },
+
+  segmentButtonActive: {
+    backgroundColor: "#fff",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 1.5,
+  },
+
+  segmentText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#71717a",
+  },
+
+  segmentTextActive: {
+    color: "#2563eb",
+    fontWeight: "bold",
   },
 });
