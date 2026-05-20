@@ -502,6 +502,50 @@ export default function OrderDetail() {
   const stage = processName
     ? detail?.stages?.find((s) => s.process_name === processName)
     : null;
+
+  const shouldExcludeMaterial = (matName: string) => {
+    const lowerName = matName.toLowerCase();
+    if (roleId === 7 && lowerName.includes("kẽm")) {
+      return true;
+    }
+    if (roleId === 9 && (lowerName.includes("giấy") || lowerName.includes("giay"))) {
+      return true;
+    }
+    return false;
+  };
+
+  // Filter stages based on active prod_id and omit null / groupedWaiting statuses
+  const filteredStages = React.useMemo(() => {
+    if (!detail?.stages) return [];
+
+    // 1. Check status: if null or groupedWaiting (case-insensitive), omit it
+    let list = detail.stages.filter(
+      (s: any) =>
+        s.status !== null &&
+        s.status !== undefined &&
+        String(s.status).toLowerCase() !== "groupedwaiting"
+    );
+
+    // 2. Filter by prod_id of that specific production only for group orders
+    if (type === "group") {
+      const targetProdId =
+        (stage as any)?.prod_id ||
+        (stage as any)?.production_id ||
+        (stage as any)?.productionId;
+
+      if (targetProdId) {
+        list = list.filter(
+          (s: any) =>
+            s.prod_id === targetProdId ||
+            s.production_id === targetProdId ||
+            s.productionId === targetProdId
+        );
+      }
+    }
+
+    return list;
+  }, [detail?.stages, stage, id, type]);
+
   const isStageFinished = stage?.status === "Finished";
   const isStageScheduled = stage?.status === "Scheduled";
   const isStageUnassigned = stage?.status === "Unassigned";
@@ -509,22 +553,26 @@ export default function OrderDetail() {
 
   // Check if the previous stage is finished (or this is the first stage)
   const currentStageIndex =
-    detail?.stages?.findIndex((s) => s.task_id === stage?.task_id) ?? -1;
+    filteredStages?.findIndex((s) => s.task_id === stage?.task_id) ?? -1;
   const isPrevStageFinished =
     currentStageIndex <= 0 ||
-    detail?.stages?.[currentStageIndex - 1]?.status === "Finished";
+    filteredStages?.[currentStageIndex - 1]?.status === "Finished";
 
   // ✅ Chỉ hiện file in ấn cho công đoạn In (9)
   const showPrintFile = roleId === 9;
 
+  const isGroupOrder = type === "group";
+
   const mustManual =
-    qrPrepare?.is_group_production === true ||
-    qrPrepare?.allow_manual_input === true;
+    isGroupOrder &&
+    (qrPrepare?.is_group_production === true ||
+      qrPrepare?.allow_manual_input === true);
   const isManual =
-    mustManual ||
-    (qrPrepare?.can_use_manual_input === true &&
-      qrPrepare?.manual_input_optional === true &&
-      useManualInputToggle);
+    isGroupOrder &&
+    (mustManual ||
+      (qrPrepare?.can_use_manual_input === true &&
+        qrPrepare?.manual_input_optional === true &&
+        useManualInputToggle));
 
   const getRoleName = (roleId?: number | null) => {
     switch (roleId) {
@@ -1011,7 +1059,7 @@ export default function OrderDetail() {
       // Validate materials
       if (qrPrepare && qrPrepare.consumable_materials.length > 0) {
         for (const mat of qrPrepare.consumable_materials) {
-          if (roleId === 7 && mat.material_name.toLowerCase().includes("kẽm")) {
+          if (shouldExcludeMaterial(mat.material_name)) {
             continue;
           }
 
@@ -1109,25 +1157,14 @@ export default function OrderDetail() {
         return false;
       }
 
-      if (isManual) {
-        if (Number(qtyBad || 0) < 0) {
-          setErrorMessage("Sản lượng hỏng không được nhỏ hơn 0");
-          setErrorVisible(true);
-          return false;
-        }
-      }
+
 
       const token = await SecureStore.getItemAsync("jwt");
 
       // Build materials array
       const materials =
         qrPrepare?.consumable_materials
-          .filter(
-            (mat) =>
-              !(
-                roleId === 7 && mat.material_name.toLowerCase().includes("kẽm")
-              ),
-          )
+          .filter((mat) => !shouldExcludeMaterial(mat.material_name))
           .map((mat) => {
             if (isManual) {
               const usedStr = materialUsedQtys[mat.material_id];
@@ -1507,7 +1544,7 @@ export default function OrderDetail() {
         ) : null}
 
         {/* PROCESS TIMELINE */}
-        <ProcessTimeline stages={detail.stages} />
+        <ProcessTimeline stages={filteredStages} />
 
         {/* INFO BOX */}
         <View style={styles.infoBox}>
@@ -1744,7 +1781,8 @@ export default function OrderDetail() {
               ) : (
                 <>
                   {/* MANUAL TOGGLE / REQUIRED NOTICE */}
-                  {qrPrepare &&
+                  {isGroupOrder &&
+                    qrPrepare &&
                     qrPrepare.can_use_manual_input &&
                     qrPrepare.manual_input_optional &&
                     !mustManual && (
@@ -1850,24 +1888,14 @@ export default function OrderDetail() {
                   {qrPrepare &&
                     isManual &&
                     qrPrepare.consumable_materials.filter(
-                      (mat) =>
-                        !(
-                          roleId === 7 &&
-                          mat.material_name.toLowerCase().includes("kẽm")
-                        ),
+                      (mat) => !shouldExcludeMaterial(mat.material_name),
                     ).length > 0 && (
                       <View style={styles.sectionBlock}>
                         <Text style={styles.sectionLabel}>
                           Báo cáo Nguyên vật liệu
                         </Text>
                         {qrPrepare.consumable_materials
-                          .filter(
-                            (mat) =>
-                              !(
-                                roleId === 7 &&
-                                mat.material_name.toLowerCase().includes("kẽm")
-                              ),
-                          )
+                          .filter((mat) => !shouldExcludeMaterial(mat.material_name))
                           .map((mat) => (
                             <View
                               key={mat.material_id}
@@ -2036,22 +2064,12 @@ export default function OrderDetail() {
                   {qrPrepare &&
                     !isManual &&
                     qrPrepare.consumable_materials.filter(
-                      (mat) =>
-                        !(
-                          roleId === 7 &&
-                          mat.material_name.toLowerCase().includes("kẽm")
-                        ),
+                      (mat) => !shouldExcludeMaterial(mat.material_name),
                     ).length > 0 && (
                       <View style={styles.sectionBlock}>
                         <Text style={styles.sectionLabel}>Nguyên liệu dư</Text>
                         {qrPrepare.consumable_materials
-                          .filter(
-                            (mat) =>
-                              !(
-                                roleId === 7 &&
-                                mat.material_name.toLowerCase().includes("kẽm")
-                              ),
-                          )
+                          .filter((mat) => !shouldExcludeMaterial(mat.material_name))
                           .map((mat) => (
                             <View
                               key={mat.material_id}
@@ -2224,7 +2242,7 @@ export default function OrderDetail() {
                       </Text>
                     </View>
 
-                    <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flexDirection: "column" }}>
                       <View style={{ flex: 1 }}>
                         <Text
                           style={{
@@ -2253,39 +2271,6 @@ export default function OrderDetail() {
                           onChangeText={handleQuantityChange}
                         />
                       </View>
-
-                      {isManual && (
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={{
-                              fontSize: 11,
-                              color: "#4b5563",
-                              marginBottom: 4,
-                              fontWeight: "600",
-                            }}
-                          >
-                            Sản lượng hỏng
-                          </Text>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              {
-                                backgroundColor: "#fff",
-                                textAlign: "right",
-                                marginBottom: 0,
-                              },
-                            ]}
-                            keyboardType="numeric"
-                            placeholder="Mặc định: 0"
-                            placeholderTextColor="#9ca3af"
-                            value={qtyBad}
-                            onChangeText={(text) => {
-                              const cleaned = text.replace(/[^0-9]/g, "");
-                              setQtyBad(cleaned);
-                            }}
-                          />
-                        </View>
-                      )}
                     </View>
 
                     {quantityError ? (
