@@ -42,7 +42,7 @@ type Stage = {
   planned_end_time: string | null;
 
   qty_good: number;
-  qty_bad: number;
+  qty_bad?: number;
 
   input_materials: {
     name: string;
@@ -779,7 +779,7 @@ export default function OrderDetail() {
       const url =
         type === "group"
           ? `https://mmes-sep490-84gr.onrender.com/api/GroupProductions/${id}/detail`
-          : `https://mmes-sep490-84gr.onrender.com/api/Productions/detail/${id}`;
+          : `https://mmes-sep490-84gr.onrender.com/api/Productions/detail/production/${id}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },

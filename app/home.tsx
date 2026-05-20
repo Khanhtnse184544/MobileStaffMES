@@ -420,7 +420,7 @@ export default function Home() {
           router.push({
             pathname: "/order/[id]",
             params: {
-              id: item.order_id === null ? item.prod_id : item.order_id,
+              id: item.prod_id,
               type: item.order_id === null ? "group" : "single",
             },
           })
