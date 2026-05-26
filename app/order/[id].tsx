@@ -24,33 +24,149 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
+/* ================= ROLE COLOR THEME ================= */
+
+type RoleTheme = {
+  primary: string;
+  light: string;
+  badge: string;
+  badgeText: string;
+  header: string;
+  headerText: string;
+  button: string;
+  buttonLight: string;
+};
+
+const ROLE_THEMES: Record<number, RoleTheme> = {
+  7: {
+    primary: "#534AB7",
+    light: "#EEEDFE",
+    badge: "#CECBF6",
+    badgeText: "#3C3489",
+    header: "#EEEDFE",
+    headerText: "#534AB7",
+    button: "#534AB7",
+    buttonLight: "#EEEDFE",
+  },
+  8: {
+    primary: "#993C1D",
+    light: "#FAECE7",
+    badge: "#F5C4B3",
+    badgeText: "#712B13",
+    header: "#FAECE7",
+    headerText: "#993C1D",
+    button: "#993C1D",
+    buttonLight: "#FAECE7",
+  },
+  9: {
+    primary: "#185FA5",
+    light: "#E6F1FB",
+    badge: "#B5D4F4",
+    badgeText: "#0C447C",
+    header: "#E6F1FB",
+    headerText: "#185FA5",
+    button: "#185FA5",
+    buttonLight: "#E6F1FB",
+  },
+  10: {
+    primary: "#3B6D11",
+    light: "#EAF3DE",
+    badge: "#C0DD97",
+    badgeText: "#27500A",
+    header: "#EAF3DE",
+    headerText: "#3B6D11",
+    button: "#3B6D11",
+    buttonLight: "#EAF3DE",
+  },
+  11: {
+    primary: "#854F0B",
+    light: "#FAEEDA",
+    badge: "#FAC775",
+    badgeText: "#633806",
+    header: "#FAEEDA",
+    headerText: "#854F0B",
+    button: "#854F0B",
+    buttonLight: "#FAEEDA",
+  },
+  12: {
+    primary: "#0F6E56",
+    light: "#E1F5EE",
+    badge: "#9FE1CB",
+    badgeText: "#085041",
+    header: "#E1F5EE",
+    headerText: "#0F6E56",
+    button: "#0F6E56",
+    buttonLight: "#E1F5EE",
+  },
+  13: {
+    primary: "#993556",
+    light: "#FBEAF0",
+    badge: "#F4C0D1",
+    badgeText: "#72243E",
+    header: "#FBEAF0",
+    headerText: "#993556",
+    button: "#993556",
+    buttonLight: "#FBEAF0",
+  },
+  14: {
+    primary: "#A32D2D",
+    light: "#FCEBEB",
+    badge: "#F7C1C1",
+    badgeText: "#791F1F",
+    header: "#FCEBEB",
+    headerText: "#A32D2D",
+    button: "#A32D2D",
+    buttonLight: "#FCEBEB",
+  },
+  15: {
+    primary: "#085041",
+    light: "#E1F5EE",
+    badge: "#5DCAA5",
+    badgeText: "#04342C",
+    header: "#E1F5EE",
+    headerText: "#085041",
+    button: "#085041",
+    buttonLight: "#E1F5EE",
+  },
+};
+
+const DEFAULT_THEME: RoleTheme = {
+  primary: "#2563eb",
+  light: "#eff6ff",
+  badge: "#bfdbfe",
+  badgeText: "#1e40af",
+  header: "#fff",
+  headerText: "#374151",
+  button: "#2563eb",
+  buttonLight: "#eff6ff",
+};
+
+const getRoleTheme = (roleId: number | null): RoleTheme =>
+  roleId && ROLE_THEMES[roleId] ? ROLE_THEMES[roleId] : DEFAULT_THEME;
+
+/* ================= TYPES ================= */
+
 type Stage = {
   task_id: number;
   process_id: number;
   seq_num: number;
-
   process_name: string;
   process_code: string;
   machine: string;
-
   task_name: string;
   status: string;
-
   start_time: string | null;
   end_time: string | null;
   planned_start_time: string | null;
   planned_end_time: string | null;
-
   qty_good: number;
   qty_bad?: number;
-
   input_materials: {
     name: string;
     code: string;
     quantity: number;
     unit: string;
   }[];
-
   output_product: {
     name: string;
     code: string;
@@ -96,7 +212,13 @@ type QrPrepare = {
 };
 
 /*================= PROCESS TIMELINE COMPONENT =================*/
-function ProcessTimeline({ stages }: { stages: Stage[] }) {
+function ProcessTimeline({
+  stages,
+  theme,
+}: {
+  stages: Stage[];
+  theme: RoleTheme;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   const getStatusConfig = (status: string) => {
@@ -117,7 +239,7 @@ function ProcessTimeline({ stages }: { stages: Stage[] }) {
         };
       case "Ready":
         return {
-          bg: "#3b82f6",
+          bg: theme.primary,
           text: "#fff",
           label: "Sẵn sàng",
           icon: "play" as const,
@@ -177,7 +299,10 @@ function ProcessTimeline({ stages }: { stages: Stage[] }) {
         <View
           style={[
             tlStyles.progressBarFill,
-            { width: `${progressPercent}%` as any },
+            {
+              width: `${progressPercent}%` as any,
+              backgroundColor: theme.primary,
+            },
           ]}
         />
       </View>
@@ -201,7 +326,10 @@ function ProcessTimeline({ stages }: { stages: Stage[] }) {
                     style={[
                       tlStyles.dot,
                       { backgroundColor: cfg.bg },
-                      isCurrent && tlStyles.dotCurrent,
+                      isCurrent && {
+                        borderWidth: 2,
+                        borderColor: theme.primary,
+                      },
                     ]}
                   >
                     {stage.status === "Finished" ? (
@@ -224,7 +352,6 @@ function ProcessTimeline({ stages }: { stages: Stage[] }) {
                     />
                   )}
                 </View>
-
                 <View
                   style={[
                     tlStyles.stageContent,
@@ -241,12 +368,23 @@ function ProcessTimeline({ stages }: { stages: Stage[] }) {
                       {stage.seq_num}. {stage.process_name}
                     </Text>
                     {isCurrent && (
-                      <View style={tlStyles.currentBadge}>
-                        <Text style={tlStyles.currentBadgeText}>HIỆN TẠI</Text>
+                      <View
+                        style={[
+                          tlStyles.currentBadge,
+                          { backgroundColor: theme.light },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            tlStyles.currentBadgeText,
+                            { color: theme.badgeText },
+                          ]}
+                        >
+                          HIỆN TẠI
+                        </Text>
                       </View>
                     )}
                   </View>
-
                   <Text
                     style={[
                       tlStyles.stageStatus,
@@ -255,7 +393,6 @@ function ProcessTimeline({ stages }: { stages: Stage[] }) {
                   >
                     {cfg.label}
                   </Text>
-
                   {startDate || stage.output_product?.quantity ? (
                     <Text style={tlStyles.stageMeta}>
                       {startDate
@@ -287,22 +424,9 @@ const tlStyles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginBottom: 12,
-  },
+  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
+  title: { fontSize: 15, fontWeight: "700", color: "#111827", marginBottom: 2 },
+  subtitle: { fontSize: 12, color: "#6b7280", marginBottom: 12 },
   progressBarBg: {
     height: 6,
     backgroundColor: "#e5e7eb",
@@ -310,11 +434,7 @@ const tlStyles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 6,
   },
-  progressBarFill: {
-    height: 6,
-    backgroundColor: "#16a34a",
-    borderRadius: 3,
-  },
+  progressBarFill: { height: 6, borderRadius: 3 },
   progressText: {
     fontSize: 11,
     color: "#9ca3af",
@@ -322,15 +442,8 @@ const tlStyles = StyleSheet.create({
     textAlign: "right",
   },
   stageList: {},
-  stageRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  dotCol: {
-    alignItems: "center",
-    width: 28,
-    marginRight: 10,
-  },
+  stageRow: { flexDirection: "row", alignItems: "flex-start" },
+  dotCol: { alignItems: "center", width: 28, marginRight: 10 },
   dot: {
     width: 26,
     height: 26,
@@ -338,10 +451,6 @@ const tlStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1,
-  },
-  dotCurrent: {
-    borderWidth: 2,
-    borderColor: "#f59e0b",
   },
   dotInnerPulse: {
     width: 8,
@@ -355,52 +464,20 @@ const tlStyles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#d1d5db",
   },
-  connector: {
-    width: 2,
-    flex: 1,
-    minHeight: 24,
-  },
-  stageContent: {
-    flex: 1,
-    paddingBottom: 16,
-  },
+  connector: { width: 2, flex: 1, minHeight: 24 },
+  stageContent: { flex: 1, paddingBottom: 16 },
   stageHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 6,
   },
-  stageName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  stageNameCurrent: {
-    color: "#111827",
-    fontWeight: "700",
-  },
-  currentBadge: {
-    backgroundColor: "#fef3c7",
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  currentBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#92400e",
-    letterSpacing: 0.5,
-  },
-  stageStatus: {
-    fontSize: 12,
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  stageMeta: {
-    fontSize: 11,
-    color: "#9ca3af",
-    marginTop: 2,
-  },
+  stageName: { fontSize: 14, fontWeight: "500", color: "#374151" },
+  stageNameCurrent: { color: "#111827", fontWeight: "700" },
+  currentBadge: { borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  currentBadgeText: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  stageStatus: { fontSize: 12, marginTop: 2, fontWeight: "500" },
+  stageMeta: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
 });
 
 export default function OrderDetail() {
@@ -430,7 +507,6 @@ export default function OrderDetail() {
   const [quantity, setQuantity] = useState("");
   const [qrData, setQrData] = useState<any>(null);
 
-  // QR Prepare state
   const [qrPrepare, setQrPrepare] = useState<QrPrepare | null>(null);
   const [prepareLoading, setPrepareLoading] = useState(false);
   const [materialLeftQtys, setMaterialLeftQtys] = useState<{
@@ -451,20 +527,17 @@ export default function OrderDetail() {
     [id: number]: string;
   }>({});
 
-  // Image capture state
   const [capturedImages, setCapturedImages] = useState<
     ImagePicker.ImagePickerAsset[]
   >([]);
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
   const [previewImageUri, setPreviewImageUri] = useState<string>("");
 
-  // Reason state
   const [reason, setReason] = useState("");
-
-  // Token copy state
   const [tokenCopied, setTokenCopied] = useState(false);
-
   const [roleId, setRoleId] = useState<number | null>(null);
+
+  const theme = getRoleTheme(roleId);
 
   const onFinishedRef = useRef<() => void>(() => {});
   onFinishedRef.current = () => {
@@ -505,44 +578,37 @@ export default function OrderDetail() {
 
   const shouldExcludeMaterial = (matName: string) => {
     const lowerName = matName.toLowerCase();
-    if (roleId === 7 && lowerName.includes("kẽm")) {
+    if (roleId === 7 && lowerName.includes("kẽm")) return true;
+    if (
+      roleId === 9 &&
+      (lowerName.includes("giấy") || lowerName.includes("giay"))
+    )
       return true;
-    }
-    if (roleId === 9 && (lowerName.includes("giấy") || lowerName.includes("giay"))) {
-      return true;
-    }
     return false;
   };
 
-  // Filter stages based on active prod_id and omit null / groupedWaiting statuses
   const filteredStages = React.useMemo(() => {
     if (!detail?.stages) return [];
-
-    // 1. Check status: if null or groupedWaiting (case-insensitive), omit it
     let list = detail.stages.filter(
       (s: any) =>
         s.status !== null &&
         s.status !== undefined &&
-        String(s.status).toLowerCase() !== "groupedwaiting"
+        String(s.status).toLowerCase() !== "groupedwaiting",
     );
-
-    // 2. Filter by prod_id of that specific production only for group orders
     if (type === "group") {
       const targetProdId =
         (stage as any)?.prod_id ||
         (stage as any)?.production_id ||
         (stage as any)?.productionId;
-
       if (targetProdId) {
         list = list.filter(
           (s: any) =>
             s.prod_id === targetProdId ||
             s.production_id === targetProdId ||
-            s.productionId === targetProdId
+            s.productionId === targetProdId,
         );
       }
     }
-
     return list;
   }, [detail?.stages, stage, id, type]);
 
@@ -551,16 +617,13 @@ export default function OrderDetail() {
   const isStageUnassigned = stage?.status === "Unassigned";
   const isStageReady = stage?.status === "Ready";
 
-  // Check if the previous stage is finished (or this is the first stage)
   const currentStageIndex =
     filteredStages?.findIndex((s) => s.task_id === stage?.task_id) ?? -1;
   const isPrevStageFinished =
     currentStageIndex <= 0 ||
     filteredStages?.[currentStageIndex - 1]?.status === "Finished";
 
-  // ✅ Chỉ hiện file in ấn cho công đoạn In (9)
   const showPrintFile = roleId === 9;
-
   const isGroupOrder = type === "group";
 
   const mustManual =
@@ -611,7 +674,6 @@ export default function OrderDetail() {
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  /*================ HANDLE QUANTITY INPUT =====================================*/
   const handleQuantityChange = (text: string) => {
     const cleaned = text.replace(/[^0-9]/g, "");
     if (cleaned === "") {
@@ -637,7 +699,6 @@ export default function OrderDetail() {
     setQuantity(String(value));
   };
 
-  /*================ HANDLE MATERIAL USED QTY (auto-calc left) ================*/
   const handleMaterialUsedChange = (
     materialId: number,
     estimated: number,
@@ -645,11 +706,8 @@ export default function OrderDetail() {
   ) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
     const numVal = parseFloat(cleaned);
-
     setMaterialUsedQtys((prev) => ({ ...prev, [materialId]: cleaned }));
-
     if (cleaned === "" || isNaN(numVal)) {
-      // Reset left to full estimated when used is cleared
       setMaterialLeftQtys((prev) => ({
         ...prev,
         [materialId]: String(estimated),
@@ -657,7 +715,6 @@ export default function OrderDetail() {
       setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
       return;
     }
-
     if (numVal < 0) {
       setMaterialErrors((prev) => ({
         ...prev,
@@ -665,9 +722,7 @@ export default function OrderDetail() {
       }));
       return;
     }
-
     if (numVal > estimated) {
-      // Clamp to estimated
       setMaterialUsedQtys((prev) => ({
         ...prev,
         [materialId]: String(estimated),
@@ -679,14 +734,11 @@ export default function OrderDetail() {
       }));
       return;
     }
-
-    // Auto-calculate left = estimated - used
     const left = parseFloat((estimated - numVal).toFixed(4));
     setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: String(left) }));
     setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
   };
 
-  /*================ HANDLE MATERIAL LEFT QTY (auto-calc used) ================*/
   const handleMaterialLeftChange = (
     materialId: number,
     estimated: number,
@@ -694,11 +746,8 @@ export default function OrderDetail() {
   ) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
     const numVal = parseFloat(cleaned);
-
     setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: cleaned }));
-
     if (cleaned === "" || isNaN(numVal)) {
-      // Reset used to full estimated when left is cleared
       setMaterialUsedQtys((prev) => ({
         ...prev,
         [materialId]: String(estimated),
@@ -706,7 +755,6 @@ export default function OrderDetail() {
       setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
       return;
     }
-
     if (numVal < 0) {
       setMaterialErrors((prev) => ({
         ...prev,
@@ -714,9 +762,7 @@ export default function OrderDetail() {
       }));
       return;
     }
-
     if (numVal > estimated) {
-      // Clamp to estimated
       setMaterialLeftQtys((prev) => ({
         ...prev,
         [materialId]: String(estimated),
@@ -728,14 +774,11 @@ export default function OrderDetail() {
       }));
       return;
     }
-
-    // Auto-calculate used = estimated - left
     const used = parseFloat((estimated - numVal).toFixed(4));
     setMaterialUsedQtys((prev) => ({ ...prev, [materialId]: String(used) }));
     setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
   };
 
-  /*================ HANDLE MATERIAL LEFT (estimate/non-manual mode) ===========*/
   const handleMaterialQtyChange = (
     materialId: number,
     estimatedQty: number,
@@ -768,7 +811,6 @@ export default function OrderDetail() {
     setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: String(value) }));
   };
 
-  /*================= IMAGE CAPTURE =================*/
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
@@ -783,9 +825,8 @@ export default function OrderDetail() {
       quality: 0.7,
       allowsEditing: false,
     });
-    if (!result.canceled && result.assets.length > 0) {
+    if (!result.canceled && result.assets.length > 0)
       setCapturedImages((prev) => [...prev, ...result.assets]);
-    }
   };
 
   const pickImage = async () => {
@@ -803,23 +844,19 @@ export default function OrderDetail() {
       allowsMultipleSelection: true,
       selectionLimit: 5,
     });
-    if (!result.canceled && result.assets.length > 0) {
+    if (!result.canceled && result.assets.length > 0)
       setCapturedImages((prev) => [...prev, ...result.assets]);
-    }
   };
 
-  const removeImage = (index: number) => {
+  const removeImage = (index: number) =>
     setCapturedImages((prev) => prev.filter((_, i) => i !== index));
-  };
 
-  /*================= COPY TOKEN =================*/
   const copyToken = async (token: string) => {
     await Clipboard.setStringAsync(token);
     setTokenCopied(true);
     setTimeout(() => setTokenCopied(false), 2000);
   };
 
-  /*================= FETCH DETAIL =================*/
   const fetchDetail = async () => {
     try {
       setLoading(true);
@@ -828,7 +865,6 @@ export default function OrderDetail() {
         type === "group"
           ? `https://mmes-sep490-84gr.onrender.com/api/GroupProductions/${id}/detail`
           : `https://mmes-sep490-84gr.onrender.com/api/Productions/detail/production/${id}`;
-
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
       });
@@ -857,7 +893,6 @@ export default function OrderDetail() {
             qty_good: s.actual_output_qty,
             qty_bad: 0,
           })) || [];
-
         setDetail({
           ...data,
           order_code: data.code,
@@ -880,7 +915,6 @@ export default function OrderDetail() {
     if (id) fetchDetail();
   }, [id]);
 
-  /*================= FETCH QR PREPARE =================*/
   const fetchQrPrepare = async (taskId: number) => {
     try {
       setPrepareLoading(true);
@@ -891,8 +925,6 @@ export default function OrderDetail() {
       );
       const data: QrPrepare = await res.json();
       setQrPrepare(data);
-
-      // Prefill: used = estimated (dùng hết), left = 0
       const initLeft: { [id: number]: string } = {};
       const initUsed: { [id: number]: string } = {};
       data.consumable_materials.forEach((m) => {
@@ -901,7 +933,6 @@ export default function OrderDetail() {
       });
       setMaterialUsedQtys(initUsed);
       setMaterialLeftQtys(initLeft);
-
       const initRefUsed: { [code: string]: string } = {};
       const initRefLeft: { [code: string]: string } = {};
       data.reference_inputs?.forEach((x) => {
@@ -910,14 +941,11 @@ export default function OrderDetail() {
       });
       setRefUsedQtys(initRefUsed);
       setRefLeftQtys(initRefLeft);
-
       setQtyBad("0");
       setUseManualInputToggle(false);
       setMaterialErrors({});
-
-      if (data.suggested_qty && data.suggested_qty > 0) {
+      if (data.suggested_qty && data.suggested_qty > 0)
         setQuantity(String(data.suggested_qty));
-      }
     } catch (err) {
       console.log("Fetch qr-prepare error:", err);
     } finally {
@@ -925,7 +953,6 @@ export default function OrderDetail() {
     }
   };
 
-  /*========== Finish Manual =======================*/
   const finishTask = async () => {
     try {
       if (!manualToken) {
@@ -958,7 +985,6 @@ export default function OrderDetail() {
     }
   };
 
-  /*================== SET TASK READY =========================*/
   const setTaskReady = async () => {
     try {
       if (!stage) return;
@@ -995,7 +1021,6 @@ export default function OrderDetail() {
     }
   };
 
-  /*================== SignalR =========================*/
   useEffect(() => {
     let connection: signalR.HubConnection;
     const startSignalR = async () => {
@@ -1006,7 +1031,6 @@ export default function OrderDetail() {
         })
         .withAutomaticReconnect()
         .build();
-
       connection.on("update-ui", (data) => {
         console.log("ProdUpdated:", data);
         setDetail((prev) => {
@@ -1024,16 +1048,12 @@ export default function OrderDetail() {
           setSuccessVisible(true);
         }
       });
-
-      connection.on("update-ui", (data) => {
-        console.log("Realtime Updated:", data);
+      connection.on("update-ui", () => {
         fetchDetail();
       });
-
       await connection.start();
       await connection.invoke("JoinProd", Number(id));
     };
-
     startSignalR();
     return () => {
       connection?.stop();
@@ -1047,22 +1067,53 @@ export default function OrderDetail() {
     }
   }, [stage?.status]);
 
-  /*================= CREATE QR =================*/
+  // =====================================================================
+  // createQr — ĐÃ BỔ SUNG ĐẦY ĐỦ VALIDATION THEO SPEC API
+  // =====================================================================
   const createQr = async (): Promise<boolean> => {
     try {
-      if (!stage) return false;
+      // [FIX 1] Validate task_id > 0
+      if (!stage || !stage.task_id || stage.task_id <= 0) {
+        setErrorMessage("Task không hợp lệ. Vui lòng thử lại.");
+        setErrorVisible(true);
+        return false;
+      }
+
       if (stage.status === "Finished") {
         onFinishedRef.current();
         return false;
       }
 
-      // Validate materials
+      // [FIX 2] Validate NVL chưa được map (is_mapped = false) — không cho submit
       if (qrPrepare && qrPrepare.consumable_materials.length > 0) {
-        for (const mat of qrPrepare.consumable_materials) {
-          if (shouldExcludeMaterial(mat.material_name)) {
-            continue;
-          }
+        const unmappedMaterials = qrPrepare.consumable_materials.filter(
+          (m) => !shouldExcludeMaterial(m.material_name) && !m.is_mapped,
+        );
+        if (unmappedMaterials.length > 0) {
+          setErrorMessage(
+            `Các nguyên vật liệu sau chưa được map, vui lòng liên hệ admin:\n${unmappedMaterials.map((m) => `• ${m.material_name}`).join("\n")}`,
+          );
+          setErrorVisible(true);
+          return false;
+        }
 
+        // [FIX 3] Validate material_id không trùng trong danh sách
+        const activeMaterials = qrPrepare.consumable_materials.filter(
+          (m) => !shouldExcludeMaterial(m.material_name),
+        );
+        const materialIds = activeMaterials.map((m) => m.material_id);
+        const hasDuplicate = materialIds.length !== new Set(materialIds).size;
+        if (hasDuplicate) {
+          setErrorMessage(
+            "Có nguyên vật liệu bị trùng trong danh sách. Vui lòng kiểm tra lại.",
+          );
+          setErrorVisible(true);
+          return false;
+        }
+
+        // Validate từng NVL
+        for (const mat of qrPrepare.consumable_materials) {
+          if (shouldExcludeMaterial(mat.material_name)) continue;
           if (isManual) {
             const usedVal = materialUsedQtys[mat.material_id];
             const leftVal = materialLeftQtys[mat.material_id];
@@ -1070,7 +1121,6 @@ export default function OrderDetail() {
               usedVal === "" || usedVal === undefined ? 0 : Number(usedVal);
             const leftNum =
               leftVal === "" || leftVal === undefined ? 0 : Number(leftVal);
-
             if (usedNum < 0 || leftNum < 0) {
               setMaterialErrors((prev) => ({
                 ...prev,
@@ -1078,8 +1128,6 @@ export default function OrderDetail() {
               }));
               return false;
             }
-
-            // Validate tổng used + left = estimated
             const total = parseFloat((usedNum + leftNum).toFixed(4));
             const estimated = mat.estimated_input_qty;
             if (Math.abs(total - estimated) > 0.001) {
@@ -1090,17 +1138,18 @@ export default function OrderDetail() {
               return false;
             }
           } else {
-            // Estimate mode — only left qty
             const val = materialLeftQtys[mat.material_id];
             if (val && val !== "") {
-              if (Number(val) < 0) {
+              const numVal = Number(val);
+              if (numVal < 0) {
                 setMaterialErrors((prev) => ({
                   ...prev,
-                  [mat.material_id]: "Số lượng không hợp lệ",
+                  [mat.material_id]: "Số lượng không được âm",
                 }));
+                // [FIX 4] Đảm bảo return false ở nhánh estimate âm
                 return false;
               }
-              if (Number(val) > mat.estimated_input_qty) {
+              if (numVal > mat.estimated_input_qty) {
                 setMaterialErrors((prev) => ({
                   ...prev,
                   [mat.material_id]: `Tối đa ${mat.estimated_input_qty}`,
@@ -1109,12 +1158,10 @@ export default function OrderDetail() {
               }
             }
           }
-
           if (materialErrors[mat.material_id]) return false;
         }
       }
 
-      // Validate reference inputs if in manual mode
       if (
         isManual &&
         qrPrepare?.reference_inputs &&
@@ -1123,15 +1170,17 @@ export default function OrderDetail() {
         for (const x of qrPrepare.reference_inputs) {
           const usedVal = refUsedQtys[x.input_code];
           const leftVal = refLeftQtys[x.input_code];
-          if (usedVal && Number(usedVal) < 0) {
+          if (usedVal !== undefined && usedVal !== "" && Number(usedVal) < 0) {
             setErrorMessage(
-              `Số lượng BTP đã dùng của ${x.input_name} không hợp lệ`,
+              `Số lượng BTP đã dùng của ${x.input_name} không được âm`,
             );
             setErrorVisible(true);
             return false;
           }
-          if (leftVal && Number(leftVal) < 0) {
-            setErrorMessage(`Số lượng BTP dư của ${x.input_name} không hợp lệ`);
+          if (leftVal !== undefined && leftVal !== "" && Number(leftVal) < 0) {
+            setErrorMessage(
+              `Số lượng BTP dư của ${x.input_name} không được âm`,
+            );
             setErrorVisible(true);
             return false;
           }
@@ -1141,6 +1190,7 @@ export default function OrderDetail() {
       const defaultQty =
         qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? 0;
       const qty = quantity ? Number(quantity) : defaultQty;
+
       if (isNaN(qty)) {
         setErrorMessage("Số lượng không hợp lệ");
         setErrorVisible(true);
@@ -1157,43 +1207,70 @@ export default function OrderDetail() {
         return false;
       }
 
+      // [FIX 5] Re-validate max_allowed tại thời điểm submit (tránh race condition khi qrPrepare load chậm)
+      const maxAllowed =
+        qrPrepare?.max_allowed && qrPrepare.max_allowed > 0
+          ? qrPrepare.max_allowed
+          : null;
+      if (maxAllowed !== null && qty > maxAllowed) {
+        setErrorMessage(
+          `Số lượng không được vượt quá ${maxAllowed} (max_allowed)`,
+        );
+        setErrorVisible(true);
+        return false;
+      }
 
+      // [FIX 6] Validate qtyBad không âm và không vượt qty_good
+      const badQty = Number(qtyBad || 0);
+      if (isNaN(badQty) || badQty < 0) {
+        setErrorMessage("Số lượng hỏng không được âm");
+        setErrorVisible(true);
+        return false;
+      }
+      if (badQty > qty) {
+        setErrorMessage("Số lượng hỏng không được lớn hơn số lượng đạt");
+        setErrorVisible(true);
+        return false;
+      }
 
       const token = await SecureStore.getItemAsync("jwt");
 
-      // Build materials array
       const materials =
-        qrPrepare?.consumable_materials
-          .filter((mat) => !shouldExcludeMaterial(mat.material_name))
-          .map((mat) => {
-            if (isManual) {
-              const usedStr = materialUsedQtys[mat.material_id];
-              const leftStr = materialLeftQtys[mat.material_id];
-              const qtyUsed =
-                usedStr === "" || usedStr === undefined ? 0 : Number(usedStr);
-              const qtyLeft =
-                leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
-              return {
-                material_id: mat.material_id,
-                quantity_used: qtyUsed,
-                quantity_left: qtyLeft,
-                is_stock: qtyLeft > 0,
-              };
-            } else {
-              // SINGLE Estimate
-              const leftStr = materialLeftQtys[mat.material_id];
-              const qtyLeft =
-                leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
-              return {
-                material_id: mat.material_id,
-                quantity_used: 0,
-                quantity_left: qtyLeft,
-                is_stock: qtyLeft > 0,
-              };
-            }
-          }) ?? [];
+        qrPrepare?.consumable_materials.map((mat) => {
+          if (shouldExcludeMaterial(mat.material_name)) {
+            return {
+              material_id: mat.material_id,
+              quantity_used: isManual ? mat.estimated_input_qty : 0,
+              quantity_left: 0,
+              is_stock: false,
+            };
+          }
+          if (isManual) {
+            const usedStr = materialUsedQtys[mat.material_id];
+            const leftStr = materialLeftQtys[mat.material_id];
+            const qtyUsed =
+              usedStr === "" || usedStr === undefined ? 0 : Number(usedStr);
+            const qtyLeft =
+              leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
+            return {
+              material_id: mat.material_id,
+              quantity_used: qtyUsed,
+              quantity_left: qtyLeft,
+              is_stock: qtyLeft > 0,
+            };
+          } else {
+            const leftStr = materialLeftQtys[mat.material_id];
+            const qtyLeft =
+              leftStr === "" || leftStr === undefined ? 0 : Number(leftStr);
+            return {
+              material_id: mat.material_id,
+              quantity_used: 0,
+              quantity_left: qtyLeft,
+              is_stock: qtyLeft > 0,
+            };
+          }
+        }) ?? [];
 
-      // Build reference inputs array
       const referenceInputs =
         qrPrepare?.reference_inputs?.map((x) => {
           const usedStr = refUsedQtys[x.input_code];
@@ -1211,34 +1288,47 @@ export default function OrderDetail() {
           };
         }) ?? [];
 
-      // Build outputs array
+      const outputCode = qrPrepare?.process_code ?? stage?.process_code ?? "";
+      const outputUnit =
+        qrPrepare?.production_output_unit ??
+        qrPrepare?.qty_unit ??
+        stage?.output_product?.unit ??
+        "";
+
+      // [FIX 7] Validate outputs_json khi manual: output_code và unit không được rỗng
+      if (isManual) {
+        if (!outputCode) {
+          setErrorMessage(
+            "Thiếu mã output (process_code). Vui lòng kiểm tra lại.",
+          );
+          setErrorVisible(true);
+          return false;
+        }
+        if (!outputUnit) {
+          setErrorMessage("Thiếu đơn vị output. Vui lòng kiểm tra lại.");
+          setErrorVisible(true);
+          return false;
+        }
+      }
+
       const outputs = [
         {
-          output_code: qrPrepare?.process_code ?? stage?.process_code ?? "",
+          output_code: outputCode,
           output_name: `BTP sau ${qrPrepare?.process_name ?? stage?.process_name ?? ""}`,
-          unit:
-            qrPrepare?.production_output_unit ??
-            qrPrepare?.qty_unit ??
-            stage?.output_product?.unit ??
-            "",
+          unit: outputUnit,
+          // [FIX 7] Đảm bảo quantity_good trong outputs luôn khớp với qty_good của form
           quantity_good: qty,
-          quantity_bad: Number(qtyBad || 0),
+          quantity_bad: badQty,
         },
       ];
 
-      // Build FormData for multipart/form-data
       const formData = new FormData();
       formData.append("task_id", String(stage.task_id));
       formData.append("ttl_minutes", "60");
       formData.append("qty_good", String(qty));
       formData.append("use_manual_input", isManual ? "true" : "false");
-
-      // Append reason if provided
       formData.append("reason", reason.trim());
-
-      // Append materials as JSON string
       formData.append("materials_json", JSON.stringify(materials));
-
       if (isManual) {
         formData.append(
           "reference_inputs_json",
@@ -1246,17 +1336,15 @@ export default function OrderDetail() {
         );
         formData.append("outputs_json", JSON.stringify(outputs));
       }
-
-      // Append captured images
       for (let i = 0; i < capturedImages.length; i++) {
         const img = capturedImages[i];
-        const uri = img.uri;
-        const filename = img.fileName || `report_${i}.jpg`;
-        const mimeType = img.mimeType || "image/jpeg";
         formData.append("images", {
-          uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
-          name: filename,
-          type: mimeType,
+          uri:
+            Platform.OS === "android"
+              ? img.uri
+              : img.uri.replace("file://", ""),
+          name: img.fileName || `report_${i}.jpg`,
+          type: img.mimeType || "image/jpeg",
         } as any);
       }
 
@@ -1264,10 +1352,7 @@ export default function OrderDetail() {
         "https://mmes-sep490-84gr.onrender.com/api/Tasks/qr",
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "text/plain",
-          },
+          headers: { Authorization: `Bearer ${token}`, Accept: "text/plain" },
           body: formData,
         },
       );
@@ -1287,8 +1372,8 @@ export default function OrderDetail() {
       setQrData(data);
       setTokenCopied(false);
       setQrVisible(true);
-      setCapturedImages([]); // Clear images after success
-      setReason(""); // Clear reason after success
+      setCapturedImages([]);
+      setReason("");
       return true;
     } catch (err: any) {
       console.log("Create QR error:", err);
@@ -1298,7 +1383,6 @@ export default function OrderDetail() {
     }
   };
 
-  /*================= UTIL =================*/
   const formatDate = (date?: string | null) => {
     if (!date) return "";
     return new Date(date).toLocaleDateString("vi-VN").split("T")[0];
@@ -1331,7 +1415,7 @@ export default function OrderDetail() {
       case "Unassigned":
         return "#9ca3af";
       case "Ready":
-        return "#3b82f6";
+        return theme.primary;
       case "Completed":
       case "Finished":
         return "#16a34a";
@@ -1340,13 +1424,12 @@ export default function OrderDetail() {
     }
   };
 
-  /*================= LOADING =================*/
   if (loading || !detail) {
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator
           size="large"
-          color="#2563eb"
+          color={theme.primary}
           style={{ marginTop: 40 }}
         />
         <Text style={{ textAlign: "center", marginTop: 12, color: "#6b7280" }}>
@@ -1356,21 +1439,26 @@ export default function OrderDetail() {
     );
   }
 
-  /*================= ACCESS RESTRICTION =================*/
   if (detail && !stage) {
     return (
       <SafeAreaView style={styles.container}>
-        {/* HEADER */}
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.header,
+              borderBottomColor: theme.primary + "40",
+            },
+          ]}
+        >
           <Image
             source={require("../../assets/logo_removed.png")}
             style={styles.logo}
           />
-          <Text style={styles.company}>
+          <Text style={[styles.company, { color: theme.headerText }]}>
             Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
           </Text>
         </View>
-
         <View
           style={{
             flex: 1,
@@ -1414,7 +1502,7 @@ export default function OrderDetail() {
           </Text>
           <TouchableOpacity
             style={{
-              backgroundColor: "#2563eb",
+              backgroundColor: theme.primary,
               paddingVertical: 12,
               paddingHorizontal: 24,
               borderRadius: 8,
@@ -1431,35 +1519,48 @@ export default function OrderDetail() {
     );
   }
 
-  /*================= UI =================*/
   return (
     <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.header,
+            borderBottomColor: theme.primary + "50",
+          },
+        ]}
+      >
         <Image
           source={require("../../assets/logo_removed.png")}
           style={styles.logo}
         />
-        <Text style={styles.company}>
-          Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.company, { color: theme.headerText }]}>
+            Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
+          </Text>
+        </View>
+        <View style={[styles.roleIndicator, { backgroundColor: theme.badge }]}>
+          <Text style={[styles.roleIndicatorText, { color: theme.badgeText }]}>
+            {getRoleName(roleId)}
+          </Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* BACK */}
         <View style={styles.titleRow}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.backBtn}
+            style={[styles.backBtn, { backgroundColor: theme.light }]}
           >
-            <Ionicons name="arrow-back" size={20} color="#2563eb" />
+            <Ionicons name="arrow-back" size={20} color={theme.primary} />
           </TouchableOpacity>
           <Text style={styles.pageTitle}>Chi tiết lệnh sản xuất</Text>
         </View>
 
-        {/* ORDER CODE + STATUS BADGE */}
         <View style={styles.orderHeader}>
-          <Text style={styles.orderId}>#{stage?.task_id ?? "--"}</Text>
+          <Text style={[styles.orderId, { color: theme.primary }]}>
+            #{stage?.task_id ?? "--"}
+          </Text>
           <View
             style={[
               styles.statusBadge,
@@ -1487,20 +1588,19 @@ export default function OrderDetail() {
           </View>
         </View>
 
-        {/* PROCESS */}
         <View style={styles.metaBox}>
           <View style={styles.metaItem}>
-            <Ionicons name="settings-outline" size={18} color="#2563eb" />
+            <Ionicons name="settings-outline" size={18} color={theme.primary} />
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.metaLabel}>Công đoạn</Text>
-              <Text style={styles.metaValue}>
+              <Text style={[styles.metaValue, { color: theme.primary }]}>
                 {stage?.process_name ?? "--"}
               </Text>
             </View>
           </View>
           <View style={styles.metaDivider} />
           <View style={styles.metaItem}>
-            <Feather name="calendar" size={18} color="#2563eb" />
+            <Feather name="calendar" size={18} color={theme.primary} />
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.metaLabel}>Hạn hoàn thành</Text>
               <Text style={styles.metaValue}>
@@ -1510,7 +1610,6 @@ export default function OrderDetail() {
           </View>
         </View>
 
-        {/* Hiển thị ảnh công đoạn */}
         {stage?.process_name && stageImages[stage.process_name] ? (
           <View style={styles.fileBox}>
             <Text style={styles.fileLabel}>
@@ -1543,12 +1642,9 @@ export default function OrderDetail() {
           </View>
         ) : null}
 
-        {/* PROCESS TIMELINE */}
-        <ProcessTimeline stages={filteredStages} />
+        <ProcessTimeline stages={filteredStages} theme={theme} />
 
-        {/* INFO BOX */}
         <View style={styles.infoBox}>
-          {/* ✅ Hiển thị đầy đủ tất cả nguyên liệu đầu vào dạng bảng */}
           {stage?.input_materials && stage.input_materials.length > 0 ? (
             <View style={{ marginBottom: 12, marginTop: 12 }}>
               <View
@@ -1558,7 +1654,7 @@ export default function OrderDetail() {
                   marginBottom: 8,
                 }}
               >
-                <Feather name="download" size={18} color="#4b5563" />
+                <Feather name="download" size={18} color={theme.primary} />
                 <Text
                   style={{
                     fontSize: 13,
@@ -1570,7 +1666,6 @@ export default function OrderDetail() {
                   Nguyên liệu đầu vào
                 </Text>
               </View>
-              {/* TABLE HEADER */}
               <View style={styles.tableHeader}>
                 <Text style={[styles.th, { flex: 2 }]}>Tên nguyên liệu</Text>
                 <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
@@ -1580,7 +1675,6 @@ export default function OrderDetail() {
                   Đơn vị
                 </Text>
               </View>
-              {/* TABLE BODY */}
               {stage.input_materials.map((mat, idx) => (
                 <View
                   key={idx}
@@ -1638,7 +1732,6 @@ export default function OrderDetail() {
                 : { color: "#9ca3af" }
             }
           />
-
           <InfoRow
             icon={
               <Ionicons name="play-circle-outline" size={20} color="#4b5563" />
@@ -1667,7 +1760,6 @@ export default function OrderDetail() {
           />
         </View>
 
-        {/* BUTTON */}
         {isStageFinished ? (
           <View style={styles.buttonFinished}>
             <Ionicons name="checkmark-circle" size={22} color="#fff" />
@@ -1677,7 +1769,10 @@ export default function OrderDetail() {
           </View>
         ) : isStageReady ? (
           <TouchableOpacity
-            style={styles.button}
+            style={[
+              styles.button,
+              { backgroundColor: theme.primary, shadowColor: theme.primary },
+            ]}
             onPress={() => {
               setQuantity(String(stage?.output_product?.quantity ?? ""));
               setQuantityError("");
@@ -1690,7 +1785,6 @@ export default function OrderDetail() {
             <Text style={styles.buttonText}>Báo cáo hoàn thành</Text>
           </TouchableOpacity>
         ) : (
-          // Unassigned / Scheduled — vàng nếu công đoạn trước hoàn thành, xám nếu chưa
           <TouchableOpacity
             style={[
               styles.readyButton,
@@ -1719,16 +1813,18 @@ export default function OrderDetail() {
       <Modal transparent visible={modalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { maxHeight: "85%" }]}>
-            <Text style={styles.modalTitle}>
-              Báo cáo công đoạn {stage?.process_name}
-            </Text>
+            <View
+              style={[styles.modalTitleRow, { borderLeftColor: theme.primary }]}
+            >
+              <Text style={styles.modalTitle}>
+                Báo cáo công đoạn {stage?.process_name}
+              </Text>
+            </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Nguyên liệu đầu vào — luôn hiển thị từ stage.input_materials */}
               {stage?.input_materials && stage.input_materials.length > 0 && (
                 <View style={styles.sectionBlock}>
                   <Text style={styles.sectionLabel}>Nguyên liệu đầu vào</Text>
-                  {/* TABLE HEADER */}
                   <View style={styles.tableHeader}>
                     <Text style={[styles.th, { flex: 2 }]}>
                       Tên nguyên liệu
@@ -1742,7 +1838,6 @@ export default function OrderDetail() {
                       Đơn vị
                     </Text>
                   </View>
-                  {/* TABLE BODY */}
                   {stage.input_materials.map((mat, idx) => (
                     <View
                       key={idx}
@@ -1775,12 +1870,11 @@ export default function OrderDetail() {
               {prepareLoading ? (
                 <ActivityIndicator
                   size="small"
-                  color="#2563eb"
+                  color={theme.primary}
                   style={{ marginVertical: 16 }}
                 />
               ) : (
                 <>
-                  {/* MANUAL TOGGLE / REQUIRED NOTICE */}
                   {isGroupOrder &&
                     qrPrepare &&
                     qrPrepare.can_use_manual_input &&
@@ -1791,11 +1885,11 @@ export default function OrderDetail() {
                           flexDirection: "row",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          backgroundColor: "#f0fdf4",
+                          backgroundColor: theme.light,
                           padding: 12,
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: "#bbf7d0",
+                          borderColor: theme.badge,
                           marginBottom: 16,
                         }}
                       >
@@ -1804,7 +1898,7 @@ export default function OrderDetail() {
                             style={{
                               fontSize: 13,
                               fontWeight: "700",
-                              color: "#166534",
+                              color: theme.badgeText,
                             }}
                           >
                             Báo cáo nhập tay
@@ -1812,7 +1906,7 @@ export default function OrderDetail() {
                           <Text
                             style={{
                               fontSize: 11,
-                              color: "#15803d",
+                              color: theme.primary,
                               marginTop: 2,
                             }}
                           >
@@ -1825,7 +1919,7 @@ export default function OrderDetail() {
                             height: 26,
                             borderRadius: 13,
                             backgroundColor: useManualInputToggle
-                              ? "#16a34a"
+                              ? theme.primary
                               : "#d1d5db",
                             padding: 2,
                             justifyContent: "center",
@@ -1844,9 +1938,6 @@ export default function OrderDetail() {
                               alignSelf: useManualInputToggle
                                 ? "flex-end"
                                 : "flex-start",
-                              shadowColor: "#000",
-                              shadowOpacity: 0.2,
-                              shadowRadius: 2,
                               elevation: 2,
                             }}
                           />
@@ -1857,11 +1948,11 @@ export default function OrderDetail() {
                   {mustManual && (
                     <View
                       style={{
-                        backgroundColor: "#eff6ff",
+                        backgroundColor: theme.light,
                         padding: 12,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: "#bfdbfe",
+                        borderColor: theme.badge,
                         marginBottom: 16,
                       }}
                     >
@@ -1869,13 +1960,17 @@ export default function OrderDetail() {
                         style={{
                           fontSize: 13,
                           fontWeight: "700",
-                          color: "#1e40af",
+                          color: theme.badgeText,
                         }}
                       >
                         Chế độ nhập tay bắt buộc
                       </Text>
                       <Text
-                        style={{ fontSize: 11, color: "#1d4ed8", marginTop: 2 }}
+                        style={{
+                          fontSize: 11,
+                          color: theme.primary,
+                          marginTop: 2,
+                        }}
                       >
                         Công đoạn{" "}
                         {qrPrepare?.is_group_production ? "ghép" : "này"} yêu
@@ -1884,7 +1979,6 @@ export default function OrderDetail() {
                     </View>
                   )}
 
-                  {/* MATERIALS SECTION — MANUAL MODE */}
                   {qrPrepare &&
                     isManual &&
                     qrPrepare.consumable_materials.filter(
@@ -1895,7 +1989,9 @@ export default function OrderDetail() {
                           Báo cáo Nguyên vật liệu
                         </Text>
                         {qrPrepare.consumable_materials
-                          .filter((mat) => !shouldExcludeMaterial(mat.material_name))
+                          .filter(
+                            (mat) => !shouldExcludeMaterial(mat.material_name),
+                          )
                           .map((mat) => (
                             <View
                               key={mat.material_id}
@@ -1906,7 +2002,9 @@ export default function OrderDetail() {
                                 borderWidth: 1,
                                 borderColor: materialErrors[mat.material_id]
                                   ? "#fca5a5"
-                                  : "#e5e7eb",
+                                  : !mat.is_mapped
+                                    ? "#fbbf24"
+                                    : "#e5e7eb",
                                 marginBottom: 12,
                               }}
                             >
@@ -1930,15 +2028,44 @@ export default function OrderDetail() {
                                   Định mức: {mat.estimated_input_qty} {mat.unit}
                                 </Text>
                               </View>
-
-                              {/* Sum indicator */}
+                              {/* [FIX 2] Hiển thị cảnh báo is_mapped = false ngay trên UI */}
+                              {!mat.is_mapped && (
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    backgroundColor: "#fffbeb",
+                                    borderRadius: 6,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 4,
+                                    marginTop: 6,
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="warning-outline"
+                                    size={13}
+                                    color="#d97706"
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#d97706",
+                                      marginLeft: 4,
+                                      fontWeight: "600",
+                                    }}
+                                  >
+                                    NVL chưa được map — Vui lòng liên hệ admin
+                                  </Text>
+                                </View>
+                              )}
                               <View
                                 style={{
                                   flexDirection: "row",
                                   alignItems: "center",
                                   marginTop: 6,
                                   marginBottom: 2,
-                                  backgroundColor: "#eff6ff",
+                                  backgroundColor: theme.light,
                                   borderRadius: 6,
                                   paddingHorizontal: 8,
                                   paddingVertical: 4,
@@ -1947,12 +2074,12 @@ export default function OrderDetail() {
                                 <Ionicons
                                   name="information-circle-outline"
                                   size={13}
-                                  color="#2563eb"
+                                  color={theme.primary}
                                 />
                                 <Text
                                   style={{
                                     fontSize: 11,
-                                    color: "#2563eb",
+                                    color: theme.primary,
                                     marginLeft: 4,
                                   }}
                                 >
@@ -1960,7 +2087,6 @@ export default function OrderDetail() {
                                   {mat.estimated_input_qty} {mat.unit})
                                 </Text>
                               </View>
-
                               <View
                                 style={{
                                   flexDirection: "row",
@@ -2005,7 +2131,6 @@ export default function OrderDetail() {
                                     }
                                   />
                                 </View>
-
                                 <View style={{ flex: 1 }}>
                                   <Text
                                     style={{
@@ -2044,7 +2169,6 @@ export default function OrderDetail() {
                                   />
                                 </View>
                               </View>
-
                               {materialErrors[mat.material_id] ? (
                                 <Text
                                   style={[
@@ -2060,7 +2184,6 @@ export default function OrderDetail() {
                       </View>
                     )}
 
-                  {/* MATERIALS SECTION — ESTIMATE MODE */}
                   {qrPrepare &&
                     !isManual &&
                     qrPrepare.consumable_materials.filter(
@@ -2069,7 +2192,9 @@ export default function OrderDetail() {
                       <View style={styles.sectionBlock}>
                         <Text style={styles.sectionLabel}>Nguyên liệu dư</Text>
                         {qrPrepare.consumable_materials
-                          .filter((mat) => !shouldExcludeMaterial(mat.material_name))
+                          .filter(
+                            (mat) => !shouldExcludeMaterial(mat.material_name),
+                          )
                           .map((mat) => (
                             <View
                               key={mat.material_id}
@@ -2083,6 +2208,36 @@ export default function OrderDetail() {
                                   Đã xuất: {mat.estimated_input_qty} {mat.unit}
                                 </Text>
                               </View>
+                              {/* [FIX 2] Cảnh báo is_mapped = false ở estimate mode */}
+                              {!mat.is_mapped && (
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    backgroundColor: "#fffbeb",
+                                    borderRadius: 6,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 4,
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="warning-outline"
+                                    size={13}
+                                    color="#d97706"
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#d97706",
+                                      marginLeft: 4,
+                                      fontWeight: "600",
+                                    }}
+                                  >
+                                    NVL chưa được map — Vui lòng liên hệ admin
+                                  </Text>
+                                </View>
+                              )}
                               <TextInput
                                 style={[
                                   styles.input,
@@ -2113,7 +2268,6 @@ export default function OrderDetail() {
                       </View>
                     )}
 
-                  {/* REFERENCE INPUTS SECTION */}
                   {isManual &&
                     qrPrepare &&
                     qrPrepare.reference_inputs &&
@@ -2153,7 +2307,6 @@ export default function OrderDetail() {
                             >
                               Định mức ước lượng: {x.estimated_qty} {x.unit}
                             </Text>
-
                             <View style={{ flexDirection: "row", gap: 10 }}>
                               <View style={{ flex: 1 }}>
                                 <Text
@@ -2190,7 +2343,6 @@ export default function OrderDetail() {
                                   }}
                                 />
                               </View>
-
                               <View style={{ flex: 1 }}>
                                 <Text
                                   style={{
@@ -2232,7 +2384,6 @@ export default function OrderDetail() {
                       </View>
                     )}
 
-                  {/* QUANTITY SECTION */}
                   <View style={styles.sectionBlock}>
                     <View style={styles.sectionHeaderRow}>
                       <Text style={styles.sectionLabel}>Sản lượng Báo cáo</Text>
@@ -2241,38 +2392,34 @@ export default function OrderDetail() {
                         {qrPrepare?.qty_unit ?? stage?.output_product?.unit}
                       </Text>
                     </View>
-
-                    <View style={{ flexDirection: "column" }}>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: "#4b5563",
-                            marginBottom: 4,
-                            fontWeight: "600",
-                          }}
-                        >
-                          Sản lượng đạt
-                        </Text>
-                        <TextInput
-                          style={[
-                            styles.input,
-                            quantityError ? styles.inputError : null,
-                            {
-                              backgroundColor: "#fff",
-                              textAlign: "right",
-                              marginBottom: 0,
-                            },
-                          ]}
-                          keyboardType="numeric"
-                          placeholder={`Mặc định: ${qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? "--"}`}
-                          placeholderTextColor="#9ca3af"
-                          value={quantity}
-                          onChangeText={handleQuantityChange}
-                        />
-                      </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: "#4b5563",
+                          marginBottom: 4,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Sản lượng đạt
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          quantityError ? styles.inputError : null,
+                          {
+                            backgroundColor: "#fff",
+                            textAlign: "right",
+                            marginBottom: 0,
+                          },
+                        ]}
+                        keyboardType="numeric"
+                        placeholder={`Mặc định: ${qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? "--"}`}
+                        placeholderTextColor="#9ca3af"
+                        value={quantity}
+                        onChangeText={handleQuantityChange}
+                      />
                     </View>
-
                     {quantityError ? (
                       <Text
                         style={[
@@ -2283,9 +2430,78 @@ export default function OrderDetail() {
                         {quantityError}
                       </Text>
                     ) : null}
+
+                    {/* [FIX 6] Input số lượng hỏng với validate inline */}
+                    <View style={{ marginTop: 10 }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: "#4b5563",
+                          marginBottom: 4,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Số lượng hỏng / lỗi
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: "#fff",
+                            textAlign: "right",
+                            marginBottom: 0,
+                          },
+                          (() => {
+                            const bad = Number(qtyBad || 0);
+                            const good = quantity
+                              ? Number(quantity)
+                              : (qrPrepare?.suggested_qty ?? 0);
+                            return bad < 0 || bad > good
+                              ? styles.inputError
+                              : null;
+                          })(),
+                        ]}
+                        keyboardType="numeric"
+                        placeholder="0"
+                        placeholderTextColor="#9ca3af"
+                        value={qtyBad}
+                        onChangeText={(text) => {
+                          const cleaned = text.replace(/[^0-9]/g, "");
+                          setQtyBad(cleaned === "" ? "0" : cleaned);
+                        }}
+                      />
+                      {(() => {
+                        const bad = Number(qtyBad || 0);
+                        const good = quantity
+                          ? Number(quantity)
+                          : (qrPrepare?.suggested_qty ?? 0);
+                        if (bad < 0)
+                          return (
+                            <Text
+                              style={[
+                                styles.fieldError,
+                                { marginTop: 4, marginBottom: 0 },
+                              ]}
+                            >
+                              Số lượng hỏng không được âm
+                            </Text>
+                          );
+                        if (bad > good && good > 0)
+                          return (
+                            <Text
+                              style={[
+                                styles.fieldError,
+                                { marginTop: 4, marginBottom: 0 },
+                              ]}
+                            >
+                              Số lượng hỏng không được lớn hơn số lượng đạt
+                            </Text>
+                          );
+                        return null;
+                      })()}
+                    </View>
                   </View>
 
-                  {/* IMAGE CAPTURE SECTION */}
                   <View style={styles.sectionBlock}>
                     <Text style={styles.sectionLabel}>Ảnh báo cáo</Text>
                     <Text
@@ -2297,11 +2513,12 @@ export default function OrderDetail() {
                     >
                       Chụp ảnh sản phẩm / công đoạn để báo cáo
                     </Text>
-
-                    {/* Camera & Gallery buttons */}
                     <View style={imgStyles.btnRow}>
                       <TouchableOpacity
-                        style={imgStyles.captureBtn}
+                        style={[
+                          imgStyles.captureBtn,
+                          { backgroundColor: theme.primary },
+                        ]}
                         onPress={takePhoto}
                         activeOpacity={0.8}
                       >
@@ -2311,7 +2528,7 @@ export default function OrderDetail() {
                       <TouchableOpacity
                         style={[
                           imgStyles.captureBtn,
-                          { backgroundColor: "#6366f1" },
+                          { backgroundColor: theme.primary + "cc" },
                         ]}
                         onPress={pickImage}
                         activeOpacity={0.8}
@@ -2320,8 +2537,6 @@ export default function OrderDetail() {
                         <Text style={imgStyles.captureBtnText}>Thư viện</Text>
                       </TouchableOpacity>
                     </View>
-
-                    {/* Image thumbnails */}
                     {capturedImages.length > 0 && (
                       <View style={imgStyles.thumbRow}>
                         {capturedImages.map((img, idx) => (
@@ -2352,7 +2567,6 @@ export default function OrderDetail() {
                         ))}
                       </View>
                     )}
-
                     {capturedImages.length > 0 && (
                       <Text
                         style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}
@@ -2362,7 +2576,6 @@ export default function OrderDetail() {
                     )}
                   </View>
 
-                  {/* REASON SECTION */}
                   <View style={styles.sectionBlock}>
                     <Text style={styles.sectionLabel}>Ghi chú / Lý do</Text>
                     <TextInput
@@ -2396,6 +2609,7 @@ export default function OrderDetail() {
               <TouchableOpacity
                 style={[
                   styles.okBtn,
+                  { backgroundColor: theme.primary },
                   (!!quantityError || prepareLoading) && styles.okBtnDisabled,
                 ]}
                 disabled={!!quantityError || prepareLoading}
@@ -2415,31 +2629,35 @@ export default function OrderDetail() {
       <Modal transparent visible={qrVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.qrBox}>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, { color: theme.primary }]}>
               QR Code {roleId ? `— ${getRoleName(roleId)}` : ""}
             </Text>
-
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ alignItems: "center", paddingBottom: 8 }}
             >
               {qrData && (
                 <>
-                  <View style={styles.qrWrapper}>
-                    <QRCode value={qrData.token} size={200} />
+                  <View
+                    style={[styles.qrWrapper, { borderColor: theme.badge }]}
+                  >
+                    <QRCode
+                      value={qrData.token}
+                      size={200}
+                      color={theme.primary}
+                    />
                   </View>
-
                   <Text style={styles.qrQty}>
                     Số lượng: {qrData.qty_good_used}{" "}
                     {stage?.output_product.unit}
                   </Text>
-
-                  {/* TOKEN BOX */}
-                  <View style={styles.tokenBox}>
+                  <View
+                    style={[styles.tokenBox, { backgroundColor: theme.light }]}
+                  >
                     <Text style={styles.tokenLabel}>Mã xác nhận</Text>
                     <View style={styles.tokenRow}>
                       <Text
-                        style={styles.tokenValue}
+                        style={[styles.tokenValue, { color: theme.primary }]}
                         numberOfLines={1}
                         ellipsizeMode="middle"
                       >
@@ -2448,6 +2666,10 @@ export default function OrderDetail() {
                       <TouchableOpacity
                         style={[
                           styles.copyBtn,
+                          {
+                            backgroundColor: theme.light,
+                            borderColor: theme.badge,
+                          },
                           tokenCopied && styles.copyBtnSuccess,
                         ]}
                         onPress={() => copyToken(qrData.token)}
@@ -2456,11 +2678,12 @@ export default function OrderDetail() {
                         <Ionicons
                           name={tokenCopied ? "checkmark" : "copy-outline"}
                           size={16}
-                          color={tokenCopied ? "#16a34a" : "#2563eb"}
+                          color={tokenCopied ? "#16a34a" : theme.primary}
                         />
                         <Text
                           style={[
                             styles.copyBtnText,
+                            { color: theme.primary },
                             tokenCopied && { color: "#16a34a" },
                           ]}
                         >
@@ -2471,31 +2694,6 @@ export default function OrderDetail() {
                   </View>
                 </>
               )}
-
-              <Text
-                style={[
-                  styles.manualLabel,
-                  { alignSelf: "flex-start", width: "100%" },
-                ]}
-              >
-                Hoặc nhập token thủ công:
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Nhập token nếu scan lỗi..."
-                placeholderTextColor="#9ca3af"
-                value={manualToken}
-                onChangeText={setManualToken}
-              />
-              <TouchableOpacity
-                style={[styles.okBtn, { width: "100%", marginTop: 4 }]}
-                onPress={finishTask}
-                disabled={finishLoading}
-              >
-                <Text style={[styles.okText, { textAlign: "center" }]}>
-                  {finishLoading ? "Đang xử lý..." : "Xác nhận hoàn thành"}
-                </Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.cancelBtn,
@@ -2533,7 +2731,7 @@ export default function OrderDetail() {
               Công đoạn đã được hoàn thành.
             </Text>
             <TouchableOpacity
-              style={styles.okBtn}
+              style={[styles.okBtn, { backgroundColor: theme.primary }]}
               onPress={() => setSuccessVisible(false)}
             >
               <Text style={[styles.okText, { textAlign: "center" }]}>OK</Text>
@@ -2565,7 +2763,7 @@ export default function OrderDetail() {
               {errorMessage}
             </Text>
             <TouchableOpacity
-              style={styles.okBtn}
+              style={[styles.okBtn, { backgroundColor: theme.primary }]}
               onPress={() => setErrorVisible(false)}
             >
               <Text style={[styles.okText, { textAlign: "center" }]}>OK</Text>
@@ -2607,7 +2805,6 @@ export default function OrderDetail() {
           )}
         </View>
       </Modal>
-      {/* CAPTURED IMAGE PREVIEW MODAL */}
       <Modal visible={imagePreviewVisible} transparent>
         <View style={styles.previewOverlay}>
           <TouchableOpacity
@@ -2629,7 +2826,6 @@ export default function OrderDetail() {
   );
 }
 
-/* Reusable InfoRow */
 function InfoRow({
   icon,
   label,
@@ -2674,7 +2870,6 @@ const infoRowStyles = StyleSheet.create({
   value: { fontSize: 14, color: "#111827", fontWeight: "500" },
 });
 
-/*================= STYLE =================*/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
   header: {
@@ -2682,12 +2877,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderColor: "#e5e7eb",
   },
   logo: { width: 56, height: 38, resizeMode: "contain", marginRight: 10 },
-  company: { flex: 1, fontSize: 12, color: "#374151", lineHeight: 18 },
+  company: { flex: 1, fontSize: 12, lineHeight: 18 },
+  roleIndicator: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  roleIndicatorText: { fontSize: 12, fontWeight: "700" },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2699,19 +2898,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#eff6ff",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
   pageTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
   orderHeader: { alignItems: "center", paddingVertical: 12 },
-  orderId: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#2563eb",
-    letterSpacing: 1,
-  },
+  orderId: { fontSize: 26, fontWeight: "800", letterSpacing: 1 },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -2763,13 +2956,11 @@ const styles = StyleSheet.create({
   metaValue: { fontSize: 14, fontWeight: "700", color: "#111827" },
   button: {
     flexDirection: "row",
-    backgroundColor: "#2563eb",
     marginHorizontal: 16,
     padding: 16,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#2563eb",
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 4,
@@ -2824,16 +3015,14 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111827",
+  modalTitleRow: {
+    borderLeftWidth: 4,
+    borderRadius: 0,
+    paddingLeft: 10,
     marginBottom: 16,
   },
-  modalSub: { fontSize: 12, color: "#6b7280", marginBottom: 16 },
-  sectionBlock: {
-    marginBottom: 16,
-  },
+  modalTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
+  sectionBlock: { marginBottom: 16 },
   sectionLabel: {
     fontSize: 12,
     fontWeight: "700",
@@ -2842,24 +3031,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 8,
   },
-  materialRow: {
-    marginBottom: 8,
-  },
+  materialRow: { marginBottom: 8 },
   materialLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
   },
-  materialName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  materialHint: {
-    fontSize: 11,
-    color: "#9ca3af",
-  },
+  materialName: { fontSize: 13, fontWeight: "600", color: "#111827" },
+  materialHint: { fontSize: 11, color: "#9ca3af" },
   qrBox: {
     width: "88%",
     maxHeight: "85%",
@@ -2876,7 +3056,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     marginVertical: 12,
   },
   qrQty: {
@@ -2885,57 +3064,26 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 10,
   },
-  tokenBox: {
-    backgroundColor: "#f1f5f9",
-    borderRadius: 8,
-    padding: 10,
-    width: "100%",
-    marginBottom: 12,
-  },
+  tokenBox: { borderRadius: 8, padding: 10, width: "100%", marginBottom: 12 },
   tokenLabel: {
     fontSize: 11,
     color: "#9ca3af",
     marginBottom: 6,
     textAlign: "center",
   },
-  tokenRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  tokenValue: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#2563eb",
-    letterSpacing: 0.5,
-  },
+  tokenRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  tokenValue: { flex: 1, fontSize: 13, fontWeight: "700", letterSpacing: 0.5 },
   copyBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#eff6ff",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
   },
-  copyBtnSuccess: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
-  },
-  copyBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#2563eb",
-  },
-  manualLabel: {
-    fontSize: 12,
-    color: "#6b7280",
-    alignSelf: "flex-start",
-    marginBottom: 8,
-  },
+  copyBtnSuccess: { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
+  copyBtnText: { fontSize: 12, fontWeight: "600" },
   input: {
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -2947,14 +3095,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9fafb",
     width: "100%",
   },
-  inputError: {
-    borderColor: "#ef4444",
-  },
-  fieldError: {
-    color: "#ef4444",
-    fontSize: 12,
-    marginBottom: 6,
-  },
+  inputError: { borderColor: "#ef4444" },
+  fieldError: { color: "#ef4444", fontSize: 12, marginBottom: 6 },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -2968,13 +3110,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f4f6",
   },
   cancelText: { color: "#374151", fontWeight: "600" },
-  okBtn: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  okBtnDisabled: { backgroundColor: "#93c5fd" },
+  okBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
+  okBtnDisabled: { opacity: 0.5 },
   okText: { color: "#fff", fontWeight: "700" },
   fileBox: {
     backgroundColor: "#fff",
@@ -3012,10 +3149,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  unitText: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
+  unitText: { fontSize: 12, color: "#6b7280" },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#e5e7eb",
@@ -3031,46 +3165,24 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10,
   },
-  th: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#374151",
-  },
-  td: {
-    fontSize: 13,
-    color: "#111827",
-  },
+  th: { fontSize: 12, fontWeight: "700", color: "#374151" },
+  td: { fontSize: 13, color: "#111827" },
 });
 
 const imgStyles = StyleSheet.create({
-  btnRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 12,
-  },
+  btnRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
   captureBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2563eb",
     paddingVertical: 10,
     borderRadius: 8,
     gap: 6,
   },
-  captureBtnText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  thumbRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  thumbWrap: {
-    position: "relative",
-  },
+  captureBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  thumbRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  thumbWrap: { position: "relative" },
   thumb: {
     width: 72,
     height: 72,

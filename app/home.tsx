@@ -50,6 +50,115 @@ export type Order = {
   stage_statuses?: any[];
 };
 
+/* ================= ROLE COLOR THEME ================= */
+
+type RoleTheme = {
+  primary: string; // main accent (buttons, borders, icons)
+  light: string; // light background tint
+  badge: string; // badge background
+  badgeText: string; // badge text
+  header: string; // header background
+  headerText: string; // header text/icon
+  bottomBar: string; // bottom tab bar
+};
+
+const ROLE_THEMES: Record<string, RoleTheme> = {
+  Ralo: {
+    primary: "#534AB7",
+    light: "#EEEDFE",
+    badge: "#CECBF6",
+    badgeText: "#3C3489",
+    header: "#EEEDFE",
+    headerText: "#534AB7",
+    bottomBar: "#534AB7",
+  },
+  Cắt: {
+    primary: "#993C1D",
+    light: "#FAECE7",
+    badge: "#F5C4B3",
+    badgeText: "#712B13",
+    header: "#FAECE7",
+    headerText: "#993C1D",
+    bottomBar: "#993C1D",
+  },
+  In: {
+    primary: "#185FA5",
+    light: "#E6F1FB",
+    badge: "#B5D4F4",
+    badgeText: "#0C447C",
+    header: "#E6F1FB",
+    headerText: "#185FA5",
+    bottomBar: "#185FA5",
+  },
+  Phủ: {
+    primary: "#3B6D11",
+    light: "#EAF3DE",
+    badge: "#C0DD97",
+    badgeText: "#27500A",
+    header: "#EAF3DE",
+    headerText: "#3B6D11",
+    bottomBar: "#3B6D11",
+  },
+  Cán: {
+    primary: "#854F0B",
+    light: "#FAEEDA",
+    badge: "#FAC775",
+    badgeText: "#633806",
+    header: "#FAEEDA",
+    headerText: "#854F0B",
+    bottomBar: "#854F0B",
+  },
+  Bồi: {
+    primary: "#0F6E56",
+    light: "#E1F5EE",
+    badge: "#9FE1CB",
+    badgeText: "#085041",
+    header: "#E1F5EE",
+    headerText: "#0F6E56",
+    bottomBar: "#0F6E56",
+  },
+  Bế: {
+    primary: "#993556",
+    light: "#FBEAF0",
+    badge: "#F4C0D1",
+    badgeText: "#72243E",
+    header: "#FBEAF0",
+    headerText: "#993556",
+    bottomBar: "#993556",
+  },
+  Dứt: {
+    primary: "#A32D2D",
+    light: "#FCEBEB",
+    badge: "#F7C1C1",
+    badgeText: "#791F1F",
+    header: "#FCEBEB",
+    headerText: "#A32D2D",
+    bottomBar: "#A32D2D",
+  },
+  Dán: {
+    primary: "#085041",
+    light: "#E1F5EE",
+    badge: "#5DCAA5",
+    badgeText: "#04342C",
+    header: "#E1F5EE",
+    headerText: "#085041",
+    bottomBar: "#085041",
+  },
+};
+
+const DEFAULT_THEME: RoleTheme = {
+  primary: "#2563eb",
+  light: "#eff6ff",
+  badge: "#bfdbfe",
+  badgeText: "#1e40af",
+  header: "#fff",
+  headerText: "#2563eb",
+  bottomBar: "#eab308",
+};
+
+const getRoleTheme = (roleName: string): RoleTheme =>
+  ROLE_THEMES[roleName] ?? DEFAULT_THEME;
+
 /* ================= CORE STATUS ================= */
 
 const getDisplayStatus = (item: Order, userRole?: string) => {
@@ -61,7 +170,6 @@ const getDisplayStatus = (item: Order, userRole?: string) => {
     : null;
   const stage_status = stage ? stage.status : item.stage_status;
 
-  // Ẩn hoàn toàn các đơn đã hoàn thành production
   if (
     production_status === "Finished" ||
     production_status === "Paid" ||
@@ -72,22 +180,18 @@ const getDisplayStatus = (item: Order, userRole?: string) => {
   )
     return "HIDDEN";
 
-  // InProcessing + Finished stage → đã hoàn thành công đoạn
   if (production_status === "InProcessing" && stage_status === "Finished")
     return "DONE";
 
-  // InProcessing + Ready → đang sản xuất
   if (production_status === "InProcessing" && stage_status === "Ready")
     return "PROCESSING";
-  //Inprocessing + Unassigned
+
   if (production_status === "InProcessing" && stage_status === "Unassigned")
     return "WAITING_PREV";
 
-  // Scheduled + Unassigned → chờ sản xuất (disabled)
   if (production_status === "Scheduled" && stage_status === "Unassigned")
     return "UNASSIGNED";
 
-  // Scheduled (mặc định) → chờ bắt đầu
   if (production_status === "Scheduled") return "SCHEDULED";
 
   return "UNKNOWN";
@@ -133,7 +237,10 @@ const getStatusColor = (item: Order, userRole?: string) => {
 
 /* ================= COMPLETION ================= */
 
-const getCompletionStatus = (item: Order, userRole?: string): CompletionStatus => {
+const getCompletionStatus = (
+  item: Order,
+  userRole?: string,
+): CompletionStatus => {
   const stage = userRole
     ? item.stage_statuses?.find(
         (s) => s.process_name?.toLowerCase() === userRole.toLowerCase(),
@@ -154,11 +261,11 @@ const getCompletionStatus = (item: Order, userRole?: string): CompletionStatus =
 const getCompletionColor = (status: CompletionStatus) => {
   switch (status) {
     case "EARLY":
-      return "#16a34a"; // xanh lá
+      return "#16a34a";
     case "ON_TIME":
-      return "#2563eb"; // xanh dương
+      return "#2563eb";
     case "LATE":
-      return "#dc2626"; // đỏ
+      return "#dc2626";
     default:
       return "#6b7280";
   }
@@ -184,7 +291,11 @@ export default function Home() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [activeSegment, setActiveSegment] = useState<"processing" | "completed">("processing");
+  const [activeSegment, setActiveSegment] = useState<
+    "processing" | "completed"
+  >("processing");
+
+  const theme = getRoleTheme(role);
 
   /* ================= COLOR ================= */
 
@@ -198,18 +309,6 @@ export default function Home() {
     NORMAL: "#16a34a",
     UNASSIGNED: "#9ca3af",
   };
-
-  /* ================= FILTER ================= */
-
-  const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: "ALL", label: "Tất cả" },
-    { key: "SCHEDULED", label: "Chờ SX" },
-    { key: "PROCESSING", label: "Đang SX" },
-    { key: "DONE", label: "Hoàn thành" },
-    { key: "OVERDUE", label: "Quá hạn" },
-    { key: "URGENT", label: "Gấp" },
-    { key: "UNASSIGNED", label: "Chờ công đoạn trước" },
-  ];
 
   /* ================= ROLE ================= */
 
@@ -246,11 +345,9 @@ export default function Home() {
     const display = getDisplayStatus(item, userRole);
 
     if (display === "UNASSIGNED") return "UNASSIGNED";
-
     if (deadline < now && display !== "DONE") return "OVERDUE";
 
     const diff = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-
     if (diff <= 2 && display !== "DONE") return "URGENT";
 
     return "NORMAL";
@@ -276,27 +373,17 @@ export default function Home() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-
       const token = await SecureStore.getItemAsync("jwt");
-
       const res = await fetch(
         "https://mmes-sep490-84gr.onrender.com/api/Productions/get-all-production?page=1&pageSize=500",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-
       const data = await res.json();
-
-      // remove duplicate prod_id
       const unique = Array.from(
         new Map(
           data.data.map((o: Order) => [o.prod_id || o.order_id, o]),
         ).values(),
       ) as Order[];
-
       setOrders(unique);
     } catch (err) {
       console.log("Fetch error:", err);
@@ -305,19 +392,15 @@ export default function Home() {
     }
   };
 
-  /* ================= COUNT ================= */
-
   /* ================= FILTER + SEARCH + SORT ================= */
 
   const filteredOrders = useMemo(() => {
     return orders
       .filter((o) => getDisplayStatus(o, role) !== "HIDDEN")
       .filter((o) => {
-        // Filter by role: at least one stage in stage_statuses must match the worker's role process_name
         if (!role) return true;
-        
         const hasRoleStage = o.stage_statuses?.some(
-          (s) => s.process_name?.toLowerCase() === role.toLowerCase()
+          (s) => s.process_name?.toLowerCase() === role.toLowerCase(),
         );
         return hasRoleStage;
       })
@@ -332,9 +415,7 @@ export default function Home() {
       .filter((o) => {
         if (!searchText) return true;
         const text = searchText.toLowerCase();
-        return (
-          o.prod_id.toString().includes(text)
-        );
+        return o.prod_id.toString().includes(text);
       })
       .sort((a, b) => {
         const priorityOrder: Record<FilterKey, number> = {
@@ -347,7 +428,10 @@ export default function Home() {
           PROCESSING: 7,
           DONE: 8,
         };
-        return priorityOrder[getPriority(a, role)] - priorityOrder[getPriority(b, role)];
+        return (
+          priorityOrder[getPriority(a, role)] -
+          priorityOrder[getPriority(b, role)]
+        );
       });
   }, [orders, searchText, role, activeSegment]);
 
@@ -356,14 +440,11 @@ export default function Home() {
   useEffect(() => {
     const loadRole = async () => {
       const roleId = await SecureStore.getItemAsync("role_id");
-
       if (roleId) setRole(getRoleName(roleId));
-
       fetchOrders();
     };
 
     loadRole();
-
     startSignalR();
 
     const handleRealtime = (data: any) => {
@@ -377,7 +458,6 @@ export default function Home() {
     };
 
     connection.on("request.changed", handleRealtime);
-
     return () => {
       connection.off("request.changed", handleRealtime);
     };
@@ -385,7 +465,7 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchOrders(); // ✅ reload mỗi lần quay lại màn
+      fetchOrders();
     }, []),
   );
 
@@ -397,7 +477,10 @@ export default function Home() {
   };
 
   const renderItem = ({ item }: { item: Order }) => {
-    const stage = item.stage_statuses?.find((s) => s.process_name?.toLowerCase() === role.toLowerCase()) || item.stage_statuses?.[0];
+    const stage =
+      item.stage_statuses?.find(
+        (s) => s.process_name?.toLowerCase() === role.toLowerCase(),
+      ) || item.stage_statuses?.[0];
     const priority = getPriority(item, role);
     const display = getDisplayStatus(item, role);
     const isDisabled = display === "SCHEDULED";
@@ -411,7 +494,7 @@ export default function Home() {
             borderLeftColor:
               completionStatus !== "NONE"
                 ? getCompletionColor(completionStatus)
-                : FILTER_COLOR[priority],
+                : theme.primary,
           },
           isDisabled && styles.disabledCard,
         ]}
@@ -438,7 +521,7 @@ export default function Home() {
               {getCompletionText(completionStatus)}
             </Text>
           )}
-          <Text style={styles.orderId}>
+          <Text style={[styles.orderId, { color: theme.primary }]}>
             Lệnh: #{item.prod_id} {isDisabled && "🔒"}
           </Text>
 
@@ -453,7 +536,7 @@ export default function Home() {
         </View>
 
         <View style={styles.row}>
-          <Feather name="settings" size={18} />
+          <Feather name="settings" size={18} color={theme.primary} />
           <View style={styles.info}>
             <Text style={styles.label}>Sản phẩm</Text>
             <Text>
@@ -463,14 +546,15 @@ export default function Home() {
         </View>
 
         <View style={styles.row}>
-          <Ionicons name="checkmark-circle-outline" size={20} />
+          <Ionicons
+            name="checkmark-circle-outline"
+            size={20}
+            color={theme.primary}
+          />
           <View style={styles.info}>
             <Text style={styles.label}>Trạng thái</Text>
             <Text
-              style={{
-                color: getStatusColor(item, role),
-                fontWeight: "bold",
-              }}
+              style={{ color: getStatusColor(item, role), fontWeight: "bold" }}
             >
               {getStatusText(item, role)}
             </Text>
@@ -478,7 +562,7 @@ export default function Home() {
         </View>
 
         <View style={styles.row}>
-          <Ionicons name="time-outline" size={18} />
+          <Ionicons name="time-outline" size={18} color={theme.primary} />
           <View style={styles.info}>
             <Text style={styles.label}>Kế hoạch</Text>
             <Text>
@@ -489,7 +573,7 @@ export default function Home() {
         </View>
 
         <View style={styles.row}>
-          <Feather name="calendar" size={18} />
+          <Feather name="calendar" size={18} color={theme.primary} />
           <View style={styles.info}>
             <Text style={styles.label}>Deadline</Text>
             <Text>{formatDate(item.delivery_date)}</Text>
@@ -501,40 +585,65 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      {/* HEADER — màu theo role */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.header,
+            borderBottomColor: theme.primary + "40",
+          },
+        ]}
+      >
         <Image
           source={require("../assets/logo_removed.png")}
           style={styles.logo}
         />
-        <Text style={styles.company}>
+        <Text style={[styles.company, { color: theme.headerText }]}>
           Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
         </Text>
       </View>
 
-      <Text style={styles.title}>Chuyên viên {role}</Text>
+      {/* ROLE BADGE */}
+      <View style={styles.titleRow}>
+        <View style={[styles.roleBadge, { backgroundColor: theme.badge }]}>
+          <Text style={[styles.roleIcon, { color: theme.primary }]}>⚙</Text>
+          <Text style={[styles.roleText, { color: theme.badgeText }]}>
+            Chuyên viên {role}
+          </Text>
+        </View>
+      </View>
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={18} />
+      <View style={[styles.searchBox, { borderColor: theme.primary + "50" }]}>
+        <Ionicons name="search-outline" size={18} color={theme.primary} />
         <TextInput
           placeholder="Tìm mã lệnh"
           value={searchText}
           onChangeText={setSearchText}
           style={{ flex: 1, marginLeft: 8 }}
+          placeholderTextColor="#9ca3af"
         />
       </View>
 
+      {/* SEGMENT */}
       <View style={styles.segmentContainer}>
         <TouchableOpacity
           style={[
             styles.segmentButton,
-            activeSegment === "processing" && styles.segmentButtonActive,
+            activeSegment === "processing" && [
+              styles.segmentButtonActive,
+              { borderBottomColor: theme.primary, borderBottomWidth: 2 },
+            ],
           ]}
           onPress={() => setActiveSegment("processing")}
         >
           <Text
             style={[
               styles.segmentText,
-              activeSegment === "processing" && styles.segmentTextActive,
+              activeSegment === "processing" && [
+                styles.segmentTextActive,
+                { color: theme.primary },
+              ],
             ]}
           >
             Đang sản xuất
@@ -543,14 +652,20 @@ export default function Home() {
         <TouchableOpacity
           style={[
             styles.segmentButton,
-            activeSegment === "completed" && styles.segmentButtonActive,
+            activeSegment === "completed" && [
+              styles.segmentButtonActive,
+              { borderBottomColor: theme.primary, borderBottomWidth: 2 },
+            ],
           ]}
           onPress={() => setActiveSegment("completed")}
         >
           <Text
             style={[
               styles.segmentText,
-              activeSegment === "completed" && styles.segmentTextActive,
+              activeSegment === "completed" && [
+                styles.segmentTextActive,
+                { color: theme.primary },
+              ],
             ]}
           >
             Đã hoàn thành
@@ -559,9 +674,10 @@ export default function Home() {
       </View>
 
       <View style={styles.infoRow}>
-        <Ionicons name="time-outline" size={18} />
-        <Text style={styles.infoText}>
-          Có {filteredOrders.length} lệnh {role} {activeSegment === "processing" ? "cần sản xuất" : "đã hoàn thành"}
+        <Ionicons name="time-outline" size={18} color={theme.primary} />
+        <Text style={[styles.infoText, { color: theme.primary }]}>
+          Có {filteredOrders.length} lệnh {role}{" "}
+          {activeSegment === "processing" ? "cần sản xuất" : "đã hoàn thành"}
         </Text>
       </View>
 
@@ -574,21 +690,21 @@ export default function Home() {
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <View style={styles.bottomBar}>
+      {/* BOTTOM BAR — màu theo role */}
+      <View style={[styles.bottomBar, { backgroundColor: theme.bottomBar }]}>
         <TouchableOpacity
           style={styles.tab}
           onPress={() => router.replace("/home")}
         >
-          <Ionicons name="calendar-outline" size={32} color="#2563eb" />
+          <Ionicons name="calendar-outline" size={32} color="#fff" />
           <Text style={styles.activeTab}>Sản xuất</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.tab}
           onPress={() => router.push("/profile")}
         >
-          <Ionicons name="person-outline" size={32} />
-          <Text>Hồ sơ</Text>
+          <Ionicons name="person-outline" size={32} color="#ffffffcc" />
+          <Text style={{ color: "#ffffffcc" }}>Hồ sơ</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -605,34 +721,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 10,
     borderBottomWidth: 1,
-    borderColor: "#ccc",
   },
 
-  logo: {
-    width: 60,
-    height: 40,
-    resizeMode: "contain",
-    marginRight: 10,
-  },
-
+  logo: { width: 60, height: 40, resizeMode: "contain", marginRight: 10 },
   company: { flex: 1, fontSize: 14 },
 
-  title: {
-    textAlign: "center",
-    fontSize: 22,
-    marginVertical: 10,
+  titleRow: {
+    alignItems: "center",
+    paddingVertical: 10,
   },
 
-  infoRow: {
+  roleBadge: {
     flexDirection: "row",
     alignItems: "center",
-    margin: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
   },
 
-  infoText: {
-    marginLeft: 8,
-    color: "#2563eb",
+  roleIcon: { fontSize: 16 },
+
+  roleText: {
+    fontSize: 16,
+    fontWeight: "700",
   },
+
+  infoRow: { flexDirection: "row", alignItems: "center", margin: 20 },
+  infoText: { marginLeft: 8 },
 
   card: {
     backgroundColor: "#fff",
@@ -641,6 +757,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 10,
     borderLeftWidth: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   headerRow: {
@@ -649,11 +769,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  orderId: {
-    color: "#2563eb",
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
+  orderId: { fontWeight: "bold", marginBottom: 10 },
 
   priorityBadge: {
     color: "#fff",
@@ -663,35 +779,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  row: {
-    flexDirection: "row",
-    marginBottom: 10,
-  },
-
-  info: {
-    marginLeft: 10,
-  },
-
-  label: {
-    color: "#777",
-    fontSize: 12,
-  },
+  row: { flexDirection: "row", marginBottom: 10 },
+  info: { marginLeft: 10 },
+  label: { color: "#777", fontSize: 12 },
 
   bottomBar: {
     position: "absolute",
     bottom: 0,
     width: "100%",
     height: 80,
-    backgroundColor: "#eab308",
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
   },
 
   tab: { alignItems: "center" },
-
-  activeTab: { color: "#2563eb" },
-
+  activeTab: { color: "#fff", fontWeight: "600" },
   disabledCard: { opacity: 0.5 },
 
   searchBox: {
@@ -699,34 +802,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginTop: 10,
+    marginTop: 4,
     paddingHorizontal: 10,
     borderRadius: 10,
     height: 40,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-
-  filterContainer: {
-    marginTop: 10,
-    paddingLeft: 10,
-  },
-
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1.5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-
-  badge: {
-    marginLeft: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
   },
 
   segmentContainer: {
@@ -754,14 +834,6 @@ const styles = StyleSheet.create({
     shadowRadius: 1.5,
   },
 
-  segmentText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#71717a",
-  },
-
-  segmentTextActive: {
-    color: "#2563eb",
-    fontWeight: "bold",
-  },
+  segmentText: { fontSize: 14, fontWeight: "500", color: "#71717a" },
+  segmentTextActive: { fontWeight: "bold" },
 });
