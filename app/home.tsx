@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { API_BASE_URL } from "../constants/api";
 import { getConnection, startSignalR } from "../hooks/signalr";
 
 const connection = getConnection();
@@ -498,14 +499,27 @@ export default function Home() {
     try {
       setLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
+      if (!token) {
+        console.log("Fetch error: chưa có token, vui lòng đăng nhập lại");
+        return;
+      }
       const res = await fetch(
-        "https://mmes-sep490.onrender.com/api/Productions/get-all-production?page=1&pageSize=500",
+        `${API_BASE_URL}/api/Productions/get-all-production?page=1&pageSize=500`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      const data = await res.json();
+      const text = await res.text();
+      if (!res.ok) {
+        console.log(`Fetch error: HTTP ${res.status}`, text || "(empty body)");
+        return;
+      }
+      if (!text) {
+        console.log("Fetch error: response rỗng");
+        return;
+      }
+      const data = JSON.parse(text);
       const unique = Array.from(
         new Map(
-          data.data.map((o: Order) => [o.prod_id || o.order_id, o]),
+          (data.data ?? []).map((o: Order) => [o.prod_id || o.order_id, o]),
         ).values(),
       ) as Order[];
       setOrders(unique);

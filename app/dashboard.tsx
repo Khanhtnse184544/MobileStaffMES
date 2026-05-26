@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_BASE_URL } from "../constants/api";
 
 /* ================= TYPES ================= */
 
@@ -351,13 +352,15 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
-      const res = await fetch(
-        "https://mmes-sep490.onrender.com/api/Tasks/get-all-task",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      const data = await res.json();
+      const res = await fetch(`${API_BASE_URL}/api/Tasks/get-all-task`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        console.log(`Fetch tasks error: HTTP ${res.status}`);
+        return;
+      }
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : [];
       setTasks(Array.isArray(data) ? data : []);
     } catch (err) {
       console.log("Fetch tasks error:", err);

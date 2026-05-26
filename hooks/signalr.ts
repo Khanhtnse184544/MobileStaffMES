@@ -1,11 +1,12 @@
 import * as signalR from "@microsoft/signalr";
+import { SIGNALR_HUB_URL } from "../constants/api";
 
 let connection: signalR.HubConnection | null = null;
 
 export const getConnection = () => {
   if (!connection) {
     connection = new signalR.HubConnectionBuilder()
-      .withUrl("https://mmes-sep490.onrender.com/hubs/realtime")
+      .withUrl(SIGNALR_HUB_URL)
       //.withUrl("http://10.0.2.2:5233/hubs/realtime")
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Information)

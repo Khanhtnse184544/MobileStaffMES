@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_BASE_URL, SIGNALR_HUB_URL } from "../../constants/api";
 
 const { width } = Dimensions.get("window");
 
@@ -918,8 +919,8 @@ export default function OrderDetail() {
       const token = await SecureStore.getItemAsync("jwt");
       const url =
         type === "group"
-          ? `https://mmes-sep490.onrender.com/api/GroupProductions/${id}/detail`
-          : `https://mmes-sep490.onrender.com/api/Productions/detail/production/${id}`;
+          ? `${API_BASE_URL}/api/GroupProductions/${id}/detail`
+          : `${API_BASE_URL}/api/Productions/detail/production/${id}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
       });
@@ -975,7 +976,7 @@ export default function OrderDetail() {
       setPrepareLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        `https://mmes-sep490.onrender.com/api/Tasks/qr-prepare/${taskId}`,
+        `${API_BASE_URL}/api/Tasks/qr-prepare/${taskId}`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "*/*" } },
       );
       const data: QrPrepare = await res.json();
@@ -1017,7 +1018,7 @@ export default function OrderDetail() {
       setFinishLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        "https://mmes-sep490.onrender.com/api/Tasks/finish",
+        `${API_BASE_URL}/api/Tasks/finish`,
         {
           method: "POST",
           headers: {
@@ -1046,7 +1047,7 @@ export default function OrderDetail() {
       setReadyLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        "https://mmes-sep490.onrender.com/api/Tasks/ready",
+        `${API_BASE_URL}/api/Tasks/ready`,
         {
           method: "PUT",
           headers: {
@@ -1081,7 +1082,7 @@ export default function OrderDetail() {
     const startSignalR = async () => {
       const token = await SecureStore.getItemAsync("jwt");
       connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://mmes-sep490.onrender.com/hubs/realtime", {
+        .withUrl(SIGNALR_HUB_URL, {
           accessTokenFactory: () => token || "",
         })
         .withAutomaticReconnect()
@@ -1403,7 +1404,7 @@ export default function OrderDetail() {
         } as any);
       }
 
-      const res = await fetch("https://mmes-sep490.onrender.com/api/Tasks/qr", {
+      const res = await fetch(`${API_BASE_URL}/api/Tasks/qr`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, Accept: "text/plain" },
         body: formData,

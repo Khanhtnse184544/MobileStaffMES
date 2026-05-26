@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_BASE_URL } from "../constants/api";
 
 const { width, height } = Dimensions.get("window");
 
@@ -29,7 +30,7 @@ export default function Login() {
   //=====login=====
   const handleLogin = async () => {
     try {
-      const response = await fetch("https://mmes-sep490-84gr.onrender.com/login", {
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
