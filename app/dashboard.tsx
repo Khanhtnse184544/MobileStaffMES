@@ -351,9 +351,12 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
-      const res = await fetch("http://10.0.2.2:5233/api/Tasks/get-all-task", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        "https://mmes-sep490.onrender.com/api/Tasks/get-all-task",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const data = await res.json();
       setTasks(Array.isArray(data) ? data : []);
     } catch (err) {
