@@ -7,6 +7,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -37,16 +38,62 @@ type CompletionStatus = "EARLY" | "ON_TIME" | "LATE" | "NONE";
 export type Order = {
   order_id: number | null;
   prod_id: number;
+  production_id: number;
+
   code: string;
+  production_code: string;
+
   customer_name: string;
   product_name: string;
+
   quantity: number;
+  nvl_qty: number;
+
   delivery_date: string;
+  planned_start_date: string | null;
+  actual_start_date: string | null;
+
   progress_percent: number;
+
   current_stage: string;
+
   status: string;
+  order_status: string;
   production_status: string;
   stage_status: string;
+
+  production_method: string;
+  prod_kind: string;
+
+  is_full_process: boolean;
+  is_group_production: boolean;
+  is_split_production: boolean;
+  is_production_ready: boolean;
+  is_auto_production_approval: boolean;
+  can_start: boolean;
+
+  can_start_message: string;
+
+  gm_note: string | null;
+  mgr_note: string | null;
+
+  sub_product_id: number | null;
+  sub_product_used_qty: number;
+
+  group_status: string | null;
+  group_process_codes: string[] | null;
+  group_total_qty: number | null;
+
+  production_approval_flow: string;
+  production_approval_label: string;
+
+  start_date: string | null;
+  end_date: string | null;
+
+  created_at: string;
+
+  stages: string[];
+
   stage_statuses?: any[];
 };
 
@@ -144,6 +191,33 @@ const ROLE_THEMES: Record<string, RoleTheme> = {
     headerText: "#085041",
     bottomBar: "#085041",
   },
+  phong_ban_1: {
+    primary: "#534AB7",
+    light: "#EEEDFE",
+    badge: "#CECBF6",
+    badgeText: "#3C3489",
+    header: "#EEEDFE",
+    headerText: "#534AB7",
+    bottomBar: "#534AB7",
+  },
+  phong_ban_2: {
+    primary: "#3B6D11",
+    light: "#EAF3DE",
+    badge: "#C0DD97",
+    badgeText: "#27500A",
+    header: "#EAF3DE",
+    headerText: "#3B6D11",
+    bottomBar: "#3B6D11",
+  },
+  phong_ban_3: {
+    primary: "#993556",
+    light: "#FBEAF0",
+    badge: "#F4C0D1",
+    badgeText: "#72243E",
+    header: "#FBEAF0",
+    headerText: "#993556",
+    bottomBar: "#993556",
+  },
 };
 
 const DEFAULT_THEME: RoleTheme = {
@@ -159,15 +233,45 @@ const DEFAULT_THEME: RoleTheme = {
 const getRoleTheme = (roleName: string): RoleTheme =>
   ROLE_THEMES[roleName] ?? DEFAULT_THEME;
 
+const getAllowedProcesses = (role: string): string[] => {
+  const r = role.toLowerCase();
+  if (r === "ralo") return ["Ralo"];
+  if (r === "cắt") return ["Cắt"];
+  if (r === "in") return ["In"];
+  if (r === "phủ") return ["Phủ"];
+  if (r === "cán") return ["Cán"];
+  if (r === "bồi") return ["Bồi"];
+  if (r === "bế") return ["Bế"];
+  if (r === "dứt") return ["Dứt"];
+  if (r === "dán") return ["Dán"];
+
+  if (r === "phong_ban_1" || r === "19") return ["Ralo", "Cắt", "In"];
+  if (r === "phong_ban_2" || r === "20") return ["Phủ", "Cán", "Bồi"];
+  if (r === "phong_ban_3" || r === "21") return ["Bế", "Dứt", "Dán"];
+
+  return [];
+};
+
+const getActiveStage = (item: Order, userRole?: string) => {
+  if (!userRole || !item.stage_statuses) return null;
+  const allowed = getAllowedProcesses(userRole);
+  if (allowed.length === 0) return null;
+
+  const stages = item.stage_statuses.filter((s) =>
+    allowed.some((a) => a.toLowerCase() === s.process_name?.toLowerCase()),
+  );
+
+  if (stages.length === 0) return null;
+
+  const active = stages.find((s) => s.status !== "Finished");
+  return active || stages[stages.length - 1];
+};
+
 /* ================= CORE STATUS ================= */
 
 const getDisplayStatus = (item: Order, userRole?: string) => {
   const { production_status } = item;
-  const stage = userRole
-    ? item.stage_statuses?.find(
-        (s) => s.process_name?.toLowerCase() === userRole.toLowerCase(),
-      )
-    : null;
+  const stage = getActiveStage(item, userRole);
   const stage_status = stage ? stage.status : item.stage_status;
 
   if (
@@ -241,11 +345,7 @@ const getCompletionStatus = (
   item: Order,
   userRole?: string,
 ): CompletionStatus => {
-  const stage = userRole
-    ? item.stage_statuses?.find(
-        (s) => s.process_name?.toLowerCase() === userRole.toLowerCase(),
-      )
-    : item.stage_statuses?.[0];
+  const stage = getActiveStage(item, userRole) || item.stage_statuses?.[0];
 
   if (!stage?.end_time) return "NONE";
 
@@ -294,6 +394,8 @@ export default function Home() {
   const [activeSegment, setActiveSegment] = useState<
     "processing" | "completed"
   >("processing");
+  const [selectedProcess, setSelectedProcess] = useState<string>("ALL");
+  const allowedProcesses = useMemo(() => getAllowedProcesses(role), [role]);
 
   const theme = getRoleTheme(role);
 
@@ -332,9 +434,31 @@ export default function Home() {
         return "Dứt";
       case "15":
         return "Dán";
+      case "19":
+        return "phong_ban_1";
+      case "20":
+        return "phong_ban_2";
+      case "21":
+        return "phong_ban_3";
       default:
         return "";
     }
+  };
+
+  const getRoleDisplayName = (r: string) => {
+    if (r === "phong_ban_1") return "Phòng ban (Ralo, Cắt, In)";
+    if (r === "phong_ban_2") return "Phòng ban (Phủ, Cán, Bồi)";
+    if (r === "phong_ban_3") return "Phòng ban (Bế, Dứt, Dán)";
+    if (r === "Ralo") return "Chuyên viên Ralo";
+    if (r === "Cắt") return "Chuyên viên Cắt";
+    if (r === "In") return "Chuyên viên In";
+    if (r === "Phủ") return "Chuyên viên Phủ";
+    if (r === "Cán") return "Chuyên viên Cán";
+    if (r === "Bồi") return "Chuyên viên Bồi";
+    if (r === "Bế") return "Chuyên viên Bế";
+    if (r === "Dứt") return "Chuyên viên Dứt";
+    if (r === "Dán") return "Chuyên viên Dán";
+    return r;
   };
 
   /* ================= PRIORITY ================= */
@@ -375,7 +499,7 @@ export default function Home() {
       setLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        "https://mmes-sep490-84gr.onrender.com/api/Productions/get-all-production?page=1&pageSize=500",
+        "https://mmes-sep490.onrender.com/api/Productions/get-all-production?page=1&pageSize=500",
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();
@@ -399,10 +523,21 @@ export default function Home() {
       .filter((o) => getDisplayStatus(o, role) !== "HIDDEN")
       .filter((o) => {
         if (!role) return true;
-        const hasRoleStage = o.stage_statuses?.some(
-          (s) => s.process_name?.toLowerCase() === role.toLowerCase(),
+        const allowed = getAllowedProcesses(role);
+        const hasRoleStage = o.stage_statuses?.some((s) =>
+          allowed.some(
+            (a) => a.toLowerCase() === s.process_name?.toLowerCase(),
+          ),
         );
         return hasRoleStage;
+      })
+      .filter((o) => {
+        if (selectedProcess === "ALL") return true;
+        const activeStage = getActiveStage(o, role);
+        return (
+          activeStage?.process_name?.toLowerCase() ===
+          selectedProcess.toLowerCase()
+        );
       })
       .filter((o) => {
         const display = getDisplayStatus(o, role);
@@ -433,7 +568,11 @@ export default function Home() {
           priorityOrder[getPriority(b, role)]
         );
       });
-  }, [orders, searchText, role, activeSegment]);
+  }, [orders, searchText, role, activeSegment, selectedProcess]);
+
+  useEffect(() => {
+    setSelectedProcess("ALL");
+  }, [role]);
 
   /* ================= EFFECT ================= */
 
@@ -477,10 +616,7 @@ export default function Home() {
   };
 
   const renderItem = ({ item }: { item: Order }) => {
-    const stage =
-      item.stage_statuses?.find(
-        (s) => s.process_name?.toLowerCase() === role.toLowerCase(),
-      ) || item.stage_statuses?.[0];
+    const stage = getActiveStage(item, role) || item.stage_statuses?.[0];
     const priority = getPriority(item, role);
     const display = getDisplayStatus(item, role);
     const isDisabled = display === "SCHEDULED";
@@ -522,7 +658,8 @@ export default function Home() {
             </Text>
           )}
           <Text style={[styles.orderId, { color: theme.primary }]}>
-            Lệnh: #{item.prod_id} {isDisabled && "🔒"}
+            Lệnh: #{item.prod_id} - {stage?.process_name || "--"}{" "}
+            {isDisabled && "🔒"}
           </Text>
 
           <Text
@@ -609,7 +746,7 @@ export default function Home() {
         <View style={[styles.roleBadge, { backgroundColor: theme.badge }]}>
           <Text style={[styles.roleIcon, { color: theme.primary }]}>⚙</Text>
           <Text style={[styles.roleText, { color: theme.badgeText }]}>
-            Chuyên viên {role}
+            {getRoleDisplayName(role)}
           </Text>
         </View>
       </View>
@@ -673,10 +810,68 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
+      {/* PROCESS TABS FOR DEPARTMENTS */}
+      {allowedProcesses.length > 1 && (
+        <View style={styles.processTabsContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.processTabsScroll}
+          >
+            <TouchableOpacity
+              style={[
+                styles.processTabButton,
+                selectedProcess === "ALL"
+                  ? { backgroundColor: theme.primary }
+                  : { backgroundColor: "#e4e4e7" },
+              ]}
+              onPress={() => setSelectedProcess("ALL")}
+            >
+              <Text
+                style={[
+                  styles.processTabText,
+                  selectedProcess === "ALL"
+                    ? { color: "#fff", fontWeight: "700" }
+                    : { color: "#4b5563" },
+                ]}
+              >
+                Tất cả
+              </Text>
+            </TouchableOpacity>
+            {allowedProcesses.map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[
+                  styles.processTabButton,
+                  selectedProcess === p
+                    ? { backgroundColor: theme.primary }
+                    : { backgroundColor: "#e4e4e7" },
+                ]}
+                onPress={() => setSelectedProcess(p)}
+              >
+                <Text
+                  style={[
+                    styles.processTabText,
+                    selectedProcess === p
+                      ? { color: "#fff", fontWeight: "700" }
+                      : { color: "#4b5563" },
+                  ]}
+                >
+                  {p}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <View style={styles.infoRow}>
         <Ionicons name="time-outline" size={18} color={theme.primary} />
         <Text style={[styles.infoText, { color: theme.primary }]}>
-          Có {filteredOrders.length} lệnh {role}{" "}
+          Có {filteredOrders.length} lệnh{" "}
+          {selectedProcess === "ALL"
+            ? getRoleDisplayName(role)
+            : `công đoạn ${selectedProcess}`}{" "}
           {activeSegment === "processing" ? "cần sản xuất" : "đã hoàn thành"}
         </Text>
       </View>
@@ -698,6 +893,13 @@ export default function Home() {
         >
           <Ionicons name="calendar-outline" size={32} color="#fff" />
           <Text style={styles.activeTab}>Sản xuất</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tab}
+          onPress={() => router.push("/dashboard")}
+        >
+          <Ionicons name="grid" size={32} color="#ffffffcc" />
+          <Text style={{ color: "#ffffffcc" }}>Dashboard</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.tab}
@@ -836,4 +1038,26 @@ const styles = StyleSheet.create({
 
   segmentText: { fontSize: 14, fontWeight: "500", color: "#71717a" },
   segmentTextActive: { fontWeight: "bold" },
+
+  processTabsContainer: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  processTabsScroll: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  processTabButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#e4e4e7",
+    minWidth: 70,
+    alignItems: "center",
+  },
+  processTabText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
 });

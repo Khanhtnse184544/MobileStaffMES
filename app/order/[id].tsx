@@ -128,6 +128,36 @@ const ROLE_THEMES: Record<number, RoleTheme> = {
     button: "#085041",
     buttonLight: "#E1F5EE",
   },
+  19: {
+    primary: "#534AB7",
+    light: "#EEEDFE",
+    badge: "#CECBF6",
+    badgeText: "#3C3489",
+    header: "#EEEDFE",
+    headerText: "#534AB7",
+    button: "#534AB7",
+    buttonLight: "#EEEDFE",
+  },
+  20: {
+    primary: "#3B6D11",
+    light: "#EAF3DE",
+    badge: "#C0DD97",
+    badgeText: "#27500A",
+    header: "#EAF3DE",
+    headerText: "#3B6D11",
+    button: "#3B6D11",
+    buttonLight: "#EAF3DE",
+  },
+  21: {
+    primary: "#993556",
+    light: "#FBEAF0",
+    badge: "#F4C0D1",
+    badgeText: "#72243E",
+    header: "#FBEAF0",
+    headerText: "#993556",
+    button: "#993556",
+    buttonLight: "#FBEAF0",
+  },
 };
 
 const DEFAULT_THEME: RoleTheme = {
@@ -546,41 +576,60 @@ export default function OrderDetail() {
     setSuccessVisible(true);
   };
 
-  const getProcessNameByRole = (roleId?: number | null) => {
+  const getAllowedProcessesByRole = (roleId?: number | null): string[] => {
     switch (roleId) {
       case 7:
-        return "Ralo";
+        return ["Ralo"];
       case 8:
-        return "Cắt";
+        return ["Cắt"];
       case 9:
-        return "In";
+        return ["In"];
       case 10:
-        return "Phủ";
+        return ["Phủ"];
       case 11:
-        return "Cán";
+        return ["Cán"];
       case 12:
-        return "Bồi";
+        return ["Bồi"];
       case 13:
-        return "Bế";
+        return ["Bế"];
       case 14:
-        return "Dứt";
+        return ["Dứt"];
       case 15:
-        return "Dán";
+        return ["Dán"];
+      case 19:
+        return ["Ralo", "Cắt", "In"];
+      case 20:
+        return ["Phủ", "Cán", "Bồi"];
+      case 21:
+        return ["Bế", "Dứt", "Dán"];
       default:
-        return null;
+        return [];
     }
   };
 
-  const processName = getProcessNameByRole(roleId);
-  const stage = processName
-    ? detail?.stages?.find((s) => s.process_name === processName)
-    : null;
+  const allowedProcesses = getAllowedProcessesByRole(roleId);
+
+  const stage = React.useMemo(() => {
+    if (!detail?.stages || allowedProcesses.length === 0) return null;
+
+    const orderAllowedStages = detail.stages.filter((s) =>
+      allowedProcesses.some(
+        (p) => p.toLowerCase() === s.process_name?.toLowerCase(),
+      ),
+    );
+
+    if (orderAllowedStages.length === 0) return null;
+
+    const activeStage = orderAllowedStages.find((s) => s.status !== "Finished");
+    return activeStage || orderAllowedStages[orderAllowedStages.length - 1];
+  }, [detail?.stages, allowedProcesses]);
 
   const shouldExcludeMaterial = (matName: string) => {
     const lowerName = matName.toLowerCase();
-    if (roleId === 7 && lowerName.includes("kẽm")) return true;
+    const currentProcess = stage?.process_name;
+    if (currentProcess === "Ralo" && lowerName.includes("kẽm")) return true;
     if (
-      roleId === 9 &&
+      currentProcess === "In" &&
       (lowerName.includes("giấy") || lowerName.includes("giay"))
     )
       return true;
@@ -623,7 +672,7 @@ export default function OrderDetail() {
     currentStageIndex <= 0 ||
     filteredStages?.[currentStageIndex - 1]?.status === "Finished";
 
-  const showPrintFile = roleId === 9;
+  const showPrintFile = roleId === 9 || stage?.process_name === "In";
   const isGroupOrder = type === "group";
 
   const mustManual =
@@ -657,6 +706,12 @@ export default function OrderDetail() {
         return "Dứt";
       case 15:
         return "Dán";
+      case 19:
+        return "Phòng ban 1";
+      case 20:
+        return "Phòng ban 2";
+      case 21:
+        return "Phòng ban 3";
       default:
         return "Không xác định";
     }
@@ -863,8 +918,8 @@ export default function OrderDetail() {
       const token = await SecureStore.getItemAsync("jwt");
       const url =
         type === "group"
-          ? `https://mmes-sep490-84gr.onrender.com/api/GroupProductions/${id}/detail`
-          : `https://mmes-sep490-84gr.onrender.com/api/Productions/detail/production/${id}`;
+          ? `https://mmes-sep490.onrender.com/api/GroupProductions/${id}/detail`
+          : `https://mmes-sep490.onrender.com/api/Productions/detail/production/${id}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
       });
@@ -920,7 +975,7 @@ export default function OrderDetail() {
       setPrepareLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        `https://mmes-sep490-84gr.onrender.com/api/Tasks/qr-prepare/${taskId}`,
+        `https://mmes-sep490.onrender.com/api/Tasks/qr-prepare/${taskId}`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "*/*" } },
       );
       const data: QrPrepare = await res.json();
@@ -962,7 +1017,7 @@ export default function OrderDetail() {
       setFinishLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        "https://mmes-sep490-84gr.onrender.com/api/Tasks/finish",
+        "https://mmes-sep490.onrender.com/api/Tasks/finish",
         {
           method: "POST",
           headers: {
@@ -991,7 +1046,7 @@ export default function OrderDetail() {
       setReadyLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(
-        "https://mmes-sep490-84gr.onrender.com/api/Tasks/ready",
+        "https://mmes-sep490.onrender.com/api/Tasks/ready",
         {
           method: "PUT",
           headers: {
@@ -1026,7 +1081,7 @@ export default function OrderDetail() {
     const startSignalR = async () => {
       const token = await SecureStore.getItemAsync("jwt");
       connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://mmes-sep490-84gr.onrender.com/hubs/realtime", {
+        .withUrl("https://mmes-sep490.onrender.com/hubs/realtime", {
           accessTokenFactory: () => token || "",
         })
         .withAutomaticReconnect()
@@ -1348,14 +1403,11 @@ export default function OrderDetail() {
         } as any);
       }
 
-      const res = await fetch(
-        "https://mmes-sep490-84gr.onrender.com/api/Tasks/qr",
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, Accept: "text/plain" },
-          body: formData,
-        },
-      );
+      const res = await fetch("https://mmes-sep490.onrender.com/api/Tasks/qr", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, Accept: "text/plain" },
+        body: formData,
+      });
       const text = await res.text();
       let data;
       try {
@@ -1498,7 +1550,7 @@ export default function OrderDetail() {
             }}
           >
             Đơn hàng #{detail.order_code || id} không chứa công đoạn dành cho
-            vai trò `{processName || "của bạn"}`.
+            vai trò `{getRoleName(roleId) || "của bạn"}`.
           </Text>
           <TouchableOpacity
             style={{
