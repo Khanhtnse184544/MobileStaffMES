@@ -5,6 +5,9 @@ workflows:
     environment:
       node: 20
 
+      android_signing:
+        - expo-release-key
+
     scripts:
       - name: Install dependencies
         script: |
