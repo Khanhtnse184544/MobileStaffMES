@@ -23,8 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.khanhtnse184544.staffproduction",
-      "versionCode": 2
+      "package": "com.khanhtnse184544.staffproduction"
     },
     "web": {
       "output": "static",
