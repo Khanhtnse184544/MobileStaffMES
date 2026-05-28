@@ -645,19 +645,31 @@ export default function OrderDetail() {
   const [prepareLoading, setPrepareLoading] = useState(false);
 
   // --- Material state (mirrors web) ---
-  const [materialLeftQtys, setMaterialLeftQtys] = useState<{ [id: number]: string }>({});
-  const [materialUsedQtys, setMaterialUsedQtys] = useState<{ [id: number]: string }>({});
-  const [materialErrors, setMaterialErrors] = useState<{ [id: number]: string }>({});
+  const [materialLeftQtys, setMaterialLeftQtys] = useState<{
+    [id: number]: string;
+  }>({});
+  const [materialUsedQtys, setMaterialUsedQtys] = useState<{
+    [id: number]: string;
+  }>({});
+  const [materialErrors, setMaterialErrors] = useState<{
+    [id: number]: string;
+  }>({});
 
   // --- Reference inputs (BTP) state ---
-  const [refUsedQtys, setRefUsedQtys] = useState<{ [code: string]: string }>({});
-  const [refLeftQtys, setRefLeftQtys] = useState<{ [code: string]: string }>({});
+  const [refUsedQtys, setRefUsedQtys] = useState<{ [code: string]: string }>(
+    {},
+  );
+  const [refLeftQtys, setRefLeftQtys] = useState<{ [code: string]: string }>(
+    {},
+  );
   const [refErrors, setRefErrors] = useState<{ [code: string]: string }>({});
 
   const [qtyBad, setQtyBad] = useState("0");
   const [useManualInputToggle, setUseManualInputToggle] = useState(false);
 
-  const [capturedImages, setCapturedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [capturedImages, setCapturedImages] = useState<
+    ImagePicker.ImagePickerAsset[]
+  >([]);
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
   const [previewImageUri, setPreviewImageUri] = useState<string>("");
 
@@ -676,19 +688,32 @@ export default function OrderDetail() {
 
   const getAllowedProcessesByRole = (roleId?: number | null): string[] => {
     switch (roleId) {
-      case 7: return ["Ralo"];
-      case 8: return ["Cắt"];
-      case 9: return ["In"];
-      case 10: return ["Phủ"];
-      case 11: return ["Cán"];
-      case 12: return ["Bồi"];
-      case 13: return ["Bế"];
-      case 14: return ["Dứt"];
-      case 15: return ["Dán"];
-      case 19: return ["Ralo", "Cắt", "In"];
-      case 20: return ["Phủ", "Cán", "Bồi"];
-      case 21: return ["Bế", "Dứt", "Dán"];
-      default: return [];
+      case 7:
+        return ["Ralo"];
+      case 8:
+        return ["Cắt"];
+      case 9:
+        return ["In"];
+      case 10:
+        return ["Phủ"];
+      case 11:
+        return ["Cán"];
+      case 12:
+        return ["Bồi"];
+      case 13:
+        return ["Bế"];
+      case 14:
+        return ["Dứt"];
+      case 15:
+        return ["Dán"];
+      case 19:
+        return ["Ralo", "Cắt", "In"];
+      case 20:
+        return ["Phủ", "Cán", "Bồi"];
+      case 21:
+        return ["Bế", "Dứt", "Dán"];
+      default:
+        return [];
     }
   };
 
@@ -697,7 +722,9 @@ export default function OrderDetail() {
   const stage = React.useMemo(() => {
     if (!detail?.stages || allowedProcesses.length === 0) return null;
     const orderAllowedStages = detail.stages.filter((s) =>
-      allowedProcesses.some((p) => p.toLowerCase() === s.process_name?.toLowerCase()),
+      allowedProcesses.some(
+        (p) => p.toLowerCase() === s.process_name?.toLowerCase(),
+      ),
     );
     if (orderAllowedStages.length === 0) return null;
     const activeStage = orderAllowedStages.find((s) => s.status !== "Finished");
@@ -708,7 +735,11 @@ export default function OrderDetail() {
     const lowerName = matName.toLowerCase();
     const currentProcess = stage?.process_name;
     if (currentProcess === "Ralo" && lowerName.includes("kẽm")) return true;
-    if (currentProcess === "In" && (lowerName.includes("giấy") || lowerName.includes("giay"))) return true;
+    if (
+      currentProcess === "In" &&
+      (lowerName.includes("giấy") || lowerName.includes("giay"))
+    )
+      return true;
     return false;
   };
 
@@ -758,19 +789,32 @@ export default function OrderDetail() {
 
   const getRoleName = (roleId?: number | null) => {
     switch (roleId) {
-      case 7: return "Ralo";
-      case 8: return "Cắt";
-      case 9: return "In";
-      case 10: return "Phủ";
-      case 11: return "Cán";
-      case 12: return "Bồi";
-      case 13: return "Bế";
-      case 14: return "Dứt";
-      case 15: return "Dán";
-      case 19: return "Phòng ban 1";
-      case 20: return "Phòng ban 2";
-      case 21: return "Phòng ban 3";
-      default: return "Không xác định";
+      case 7:
+        return "Ralo";
+      case 8:
+        return "Cắt";
+      case 9:
+        return "In";
+      case 10:
+        return "Phủ";
+      case 11:
+        return "Cán";
+      case 12:
+        return "Bồi";
+      case 13:
+        return "Bế";
+      case 14:
+        return "Dứt";
+      case 15:
+        return "Dán";
+      case 19:
+        return "Phòng ban 1";
+      case 20:
+        return "Phòng ban 2";
+      case 21:
+        return "Phòng ban 3";
+      default:
+        return "Không xác định";
     }
   };
 
@@ -851,18 +895,30 @@ export default function OrderDetail() {
     const numVal = parseFloat(cleaned);
     setMaterialUsedQtys((prev) => ({ ...prev, [materialId]: cleaned }));
     if (cleaned === "" || isNaN(numVal)) {
-      setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: String(estimated) }));
+      setMaterialLeftQtys((prev) => ({
+        ...prev,
+        [materialId]: String(estimated),
+      }));
       setMaterialErrors((prev) => ({ ...prev, [materialId]: "" }));
       return;
     }
     if (numVal < 0) {
-      setMaterialErrors((prev) => ({ ...prev, [materialId]: "Số lượng không được âm" }));
+      setMaterialErrors((prev) => ({
+        ...prev,
+        [materialId]: "Số lượng không được âm",
+      }));
       return;
     }
     if (numVal > estimated) {
-      setMaterialUsedQtys((prev) => ({ ...prev, [materialId]: String(estimated) }));
+      setMaterialUsedQtys((prev) => ({
+        ...prev,
+        [materialId]: String(estimated),
+      }));
       setMaterialLeftQtys((prev) => ({ ...prev, [materialId]: "0" }));
-      setMaterialErrors((prev) => ({ ...prev, [materialId]: `Vượt quá định mức (${estimated})` }));
+      setMaterialErrors((prev) => ({
+        ...prev,
+        [materialId]: `Vượt quá định mức (${estimated})`,
+      }));
       return;
     }
     const left = parseFloat((estimated - numVal).toFixed(4));
@@ -907,7 +963,10 @@ export default function OrderDetail() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Quyền truy cập", "Ứng dụng cần quyền truy cập camera để chụp ảnh báo cáo.");
+      Alert.alert(
+        "Quyền truy cập",
+        "Ứng dụng cần quyền truy cập camera để chụp ảnh báo cáo.",
+      );
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -922,7 +981,10 @@ export default function OrderDetail() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Quyền truy cập", "Ứng dụng cần quyền truy cập thư viện ảnh.");
+      Alert.alert(
+        "Quyền truy cập",
+        "Ứng dụng cần quyền truy cập thư viện ảnh.",
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -1006,9 +1068,12 @@ export default function OrderDetail() {
     try {
       setPrepareLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
-      const res = await fetch(`${API_BASE_URL}/api/Tasks/qr-prepare/${taskId}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/Tasks/qr-prepare/${taskId}`,
+        {
+          headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+        },
+      );
       const data: QrPrepare = await res.json();
 
       // Mark paper materials in print stage (mirrors web)
@@ -1065,12 +1130,18 @@ export default function OrderDetail() {
 
   const finishTask = async () => {
     try {
-      if (!manualToken) { alert("Vui lòng nhập token"); return; }
+      if (!manualToken) {
+        alert("Vui lòng nhập token");
+        return;
+      }
       setFinishLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
       const res = await fetch(`${API_BASE_URL}/api/Tasks/finish`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ token: manualToken }),
       });
       const data = await res.json();
@@ -1101,8 +1172,13 @@ export default function OrderDetail() {
       });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch { data = { message: text }; }
-      if (!res.ok) throw new Error(data?.message || "Không thể bắt đầu công đoạn");
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
+      if (!res.ok)
+        throw new Error(data?.message || "Không thể bắt đầu công đoạn");
       fetchDetail();
     } catch (err: any) {
       setErrorMessage(err.message || "Có lỗi xảy ra");
@@ -1136,12 +1212,16 @@ export default function OrderDetail() {
           setSuccessVisible(true);
         }
       });
-      connection.on("update-ui", () => { fetchDetail(); });
+      connection.on("update-ui", () => {
+        fetchDetail();
+      });
       await connection.start();
       await connection.invoke("JoinProd", Number(id));
     };
     startSignalR();
-    return () => { connection?.stop(); };
+    return () => {
+      connection?.stop();
+    };
   }, [id]);
 
   useEffect(() => {
@@ -1161,7 +1241,10 @@ export default function OrderDetail() {
         setErrorVisible(true);
         return false;
       }
-      if (stage.status === "Finished") { onFinishedRef.current(); return false; }
+      if (stage.status === "Finished") {
+        onFinishedRef.current();
+        return false;
+      }
 
       const mode = resolveQrMode(qrPrepare, useManualInputToggle);
       const manualMode = isManualInputMode(mode);
@@ -1169,7 +1252,10 @@ export default function OrderDetail() {
       // --- Validate consumable materials ---
       if (qrPrepare && qrPrepare.consumable_materials.length > 0) {
         const unmapped = qrPrepare.consumable_materials.filter(
-          (m) => !shouldExcludeMaterial(m.material_name) && !m._isPaperInPrint && !m.is_mapped,
+          (m) =>
+            !shouldExcludeMaterial(m.material_name) &&
+            !m._isPaperInPrint &&
+            !m.is_mapped,
         );
         if (unmapped.length > 0) {
           setErrorMessage(
@@ -1184,19 +1270,25 @@ export default function OrderDetail() {
           .filter((m) => !shouldExcludeMaterial(m.material_name))
           .map((m) => m.material_id);
         if (activeIds.length !== new Set(activeIds).size) {
-          setErrorMessage("Có NVL bị trùng trong danh sách. Vui lòng kiểm tra lại.");
+          setErrorMessage(
+            "Có NVL bị trùng trong danh sách. Vui lòng kiểm tra lại.",
+          );
           setErrorVisible(true);
           return false;
         }
 
         // Validate each material
         for (const mat of qrPrepare.consumable_materials) {
-          if (shouldExcludeMaterial(mat.material_name) || mat._isPaperInPrint) continue;
+          if (shouldExcludeMaterial(mat.material_name) || mat._isPaperInPrint)
+            continue;
           if (manualMode) {
             const usedNum = parseReportQty(materialUsedQtys[mat.material_id]);
             const leftNum = parseReportQty(materialLeftQtys[mat.material_id]);
             if (usedNum < 0 || leftNum < 0) {
-              setMaterialErrors((prev) => ({ ...prev, [mat.material_id]: "Số lượng không được âm" }));
+              setMaterialErrors((prev) => ({
+                ...prev,
+                [mat.material_id]: "Số lượng không được âm",
+              }));
               setErrorMessage("Vui lòng kiểm tra lại số lượng NVL.");
               setErrorVisible(true);
               return false;
@@ -1216,11 +1308,17 @@ export default function OrderDetail() {
             if (val && val !== "") {
               const numVal = Number(val);
               if (numVal < 0) {
-                setMaterialErrors((prev) => ({ ...prev, [mat.material_id]: "Số lượng không được âm" }));
+                setMaterialErrors((prev) => ({
+                  ...prev,
+                  [mat.material_id]: "Số lượng không được âm",
+                }));
                 return false;
               }
               if (numVal > mat.estimated_input_qty) {
-                setMaterialErrors((prev) => ({ ...prev, [mat.material_id]: `Tối đa ${mat.estimated_input_qty}` }));
+                setMaterialErrors((prev) => ({
+                  ...prev,
+                  [mat.material_id]: `Tối đa ${mat.estimated_input_qty}`,
+                }));
                 return false;
               }
             }
@@ -1233,7 +1331,9 @@ export default function OrderDetail() {
       if (manualMode && qrPrepare?.reference_inputs?.length) {
         for (const ref of qrPrepare.reference_inputs) {
           if (refErrors[ref.input_code]) {
-            setErrorMessage(`Lỗi BTP ${ref.input_name}: ${refErrors[ref.input_code]}`);
+            setErrorMessage(
+              `Lỗi BTP ${ref.input_name}: ${refErrors[ref.input_code]}`,
+            );
             setErrorVisible(true);
             return false;
           }
@@ -1241,7 +1341,8 @@ export default function OrderDetail() {
       }
 
       // --- Validate qty_good ---
-      const defaultQty = qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? 0;
+      const defaultQty =
+        qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? 0;
       const qty = quantity ? Number(quantity) : defaultQty;
       if (isNaN(qty) || qty <= 0) {
         setErrorMessage("Số lượng phải lớn hơn 0");
@@ -1253,7 +1354,10 @@ export default function OrderDetail() {
         setErrorVisible(true);
         return false;
       }
-      const maxAllowed = qrPrepare?.max_allowed && qrPrepare.max_allowed > 0 ? qrPrepare.max_allowed : null;
+      const maxAllowed =
+        qrPrepare?.max_allowed && qrPrepare.max_allowed > 0
+          ? qrPrepare.max_allowed
+          : null;
       if (maxAllowed !== null && qty > maxAllowed) {
         setErrorMessage(`Số lượng không được vượt quá ${maxAllowed}`);
         setErrorVisible(true);
@@ -1279,15 +1383,30 @@ export default function OrderDetail() {
       const materials =
         qrPrepare?.consumable_materials.map((mat) => {
           if (shouldExcludeMaterial(mat.material_name) || mat._isPaperInPrint) {
-            return { material_id: mat.material_id, quantity_used: 0, quantity_left: 0, is_stock: false };
+            return {
+              material_id: mat.material_id,
+              quantity_used: 0,
+              quantity_left: 0,
+              is_stock: false,
+            };
           }
           if (manualMode) {
             const qtyUsed = parseReportQty(materialUsedQtys[mat.material_id]);
             const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
-            return { material_id: mat.material_id, quantity_used: qtyUsed, quantity_left: qtyLeft, is_stock: resolveIsStock(qtyLeft) };
+            return {
+              material_id: mat.material_id,
+              quantity_used: qtyUsed,
+              quantity_left: qtyLeft,
+              is_stock: resolveIsStock(qtyLeft),
+            };
           } else {
             const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
-            return { material_id: mat.material_id, quantity_used: 0, quantity_left: qtyLeft, is_stock: resolveIsStock(qtyLeft) };
+            return {
+              material_id: mat.material_id,
+              quantity_used: 0,
+              quantity_left: qtyLeft,
+              is_stock: resolveIsStock(qtyLeft),
+            };
           }
         }) ?? [];
 
@@ -1303,11 +1422,16 @@ export default function OrderDetail() {
 
       const outputCode = qrPrepare?.process_code ?? stage?.process_code ?? "";
       const outputUnit =
-        qrPrepare?.production_output_unit ?? qrPrepare?.qty_unit ?? stage?.output_product?.unit ?? "";
+        qrPrepare?.production_output_unit ??
+        qrPrepare?.qty_unit ??
+        stage?.output_product?.unit ??
+        "";
 
       if (manualMode) {
         if (!outputCode) {
-          setErrorMessage("Thiếu mã output (process_code). Vui lòng kiểm tra lại.");
+          setErrorMessage(
+            "Thiếu mã output (process_code). Vui lòng kiểm tra lại.",
+          );
           setErrorVisible(true);
           return false;
         }
@@ -1318,13 +1442,15 @@ export default function OrderDetail() {
         }
       }
 
-      const outputs = [{
-        output_code: outputCode,
-        output_name: `BTP sau ${qrPrepare?.process_name ?? stage?.process_name ?? ""}`,
-        unit: outputUnit,
-        quantity_good: qty,
-        quantity_bad: badQty,
-      }];
+      const outputs = [
+        {
+          output_code: outputCode,
+          output_name: `BTP sau ${qrPrepare?.process_name ?? stage?.process_name ?? ""}`,
+          unit: outputUnit,
+          quantity_good: qty,
+          quantity_bad: badQty,
+        },
+      ];
 
       const formData = new FormData();
       formData.append("task_id", String(stage.task_id));
@@ -1334,13 +1460,19 @@ export default function OrderDetail() {
       formData.append("reason", reason.trim());
       formData.append("materials_json", JSON.stringify(materials));
       if (manualMode) {
-        formData.append("reference_inputs_json", JSON.stringify(referenceInputs));
+        formData.append(
+          "reference_inputs_json",
+          JSON.stringify(referenceInputs),
+        );
         formData.append("outputs_json", JSON.stringify(outputs));
       }
       for (let i = 0; i < capturedImages.length; i++) {
         const img = capturedImages[i];
         formData.append("images", {
-          uri: Platform.OS === "android" ? img.uri : img.uri.replace("file://", ""),
+          uri:
+            Platform.OS === "android"
+              ? img.uri
+              : img.uri.replace("file://", ""),
           name: img.fileName || `report_${i}.jpg`,
           type: img.mimeType || "image/jpeg",
         } as any);
@@ -1353,9 +1485,16 @@ export default function OrderDetail() {
       });
       const text = await res.text();
       let data;
-      try { data = JSON.parse(text); } catch { throw new Error("Không parse được dữ liệu từ server"); }
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Không parse được dữ liệu từ server");
+      }
       if (!res.ok) throw new Error(data?.message || "Tạo QR thất bại");
-      if (stage.status === "Finished") { onFinishedRef.current(); return false; }
+      if (stage.status === "Finished") {
+        onFinishedRef.current();
+        return false;
+      }
 
       setQrData(data);
       setTokenCopied(false);
@@ -1377,31 +1516,51 @@ export default function OrderDetail() {
 
   const getStatusText = (status?: string) => {
     switch (status) {
-      case "InProcessing": return "Đang sản xuất";
-      case "Scheduled": return "Chờ sản xuất";
-      case "Unassigned": return "Chờ bắt đầu sản xuất";
-      case "Ready": return "Sẵn sàng";
-      case "Completed": case "Finished": return "Hoàn thành";
-      default: return status;
+      case "InProcessing":
+        return "Đang sản xuất";
+      case "Scheduled":
+        return "Chờ sản xuất";
+      case "Unassigned":
+        return "Chờ bắt đầu sản xuất";
+      case "Ready":
+        return "Sẵn sàng";
+      case "Completed":
+      case "Finished":
+        return "Hoàn thành";
+      default:
+        return status;
     }
   };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case "InProcessing": return "#f59e0b";
-      case "Scheduled": return "#6b7280";
-      case "Unassigned": return "#9ca3af";
-      case "Ready": return theme.primary;
-      case "Completed": case "Finished": return "#16a34a";
-      default: return "#6b7280";
+      case "InProcessing":
+        return "#f59e0b";
+      case "Scheduled":
+        return "#6b7280";
+      case "Unassigned":
+        return "#9ca3af";
+      case "Ready":
+        return theme.primary;
+      case "Completed":
+      case "Finished":
+        return "#16a34a";
+      default:
+        return "#6b7280";
     }
   };
 
   if (loading || !detail) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
-        <Text style={{ textAlign: "center", marginTop: 12, color: "#6b7280" }}>Đang tải dữ liệu...</Text>
+        <ActivityIndicator
+          size="large"
+          color={theme.primary}
+          style={{ marginTop: 40 }}
+        />
+        <Text style={{ textAlign: "center", marginTop: 12, color: "#6b7280" }}>
+          Đang tải dữ liệu...
+        </Text>
       </SafeAreaView>
     );
   }
@@ -1409,27 +1568,77 @@ export default function OrderDetail() {
   if (detail && !stage) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={[styles.header, { backgroundColor: theme.header, borderBottomColor: theme.primary + "40" }]}>
-          <Image source={require("../../assets/logo_removed.png")} style={styles.logo} />
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.header,
+              borderBottomColor: theme.primary + "40",
+            },
+          ]}
+        >
+          <Image
+            source={require("../../assets/logo_removed.png")}
+            style={styles.logo}
+          />
           <Text style={[styles.company, { color: theme.headerText }]}>
             Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
           </Text>
         </View>
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
-          <View style={{ backgroundColor: "#fee2e2", padding: 16, borderRadius: 50, marginBottom: 16 }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#fee2e2",
+              padding: 16,
+              borderRadius: 50,
+              marginBottom: 16,
+            }}
+          >
             <Ionicons name="lock-closed" size={40} color="#dc2626" />
           </View>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#111827", textAlign: "center", marginBottom: 8 }}>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "700",
+              color: "#111827",
+              textAlign: "center",
+              marginBottom: 8,
+            }}
+          >
             Không có quyền truy cập
           </Text>
-          <Text style={{ fontSize: 14, color: "#4b5563", textAlign: "center", lineHeight: 20, marginBottom: 24 }}>
-            Đơn hàng #{detail.order_code || id} không chứa công đoạn dành cho vai trò `{getRoleName(roleId) || "của bạn"}`.
+          <Text
+            style={{
+              fontSize: 14,
+              color: "#4b5563",
+              textAlign: "center",
+              lineHeight: 20,
+              marginBottom: 24,
+            }}
+          >
+            Đơn hàng #{detail.order_code || id} không chứa công đoạn dành cho
+            vai trò `{getRoleName(roleId) || "của bạn"}`.
           </Text>
           <TouchableOpacity
-            style={{ backgroundColor: theme.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, elevation: 2 }}
+            style={{
+              backgroundColor: theme.primary,
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 8,
+              elevation: 2,
+            }}
             onPress={() => router.back()}
           >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>Quay lại Trang chủ</Text>
+            <Text style={{ color: "#fff", fontWeight: "600" }}>
+              Quay lại Trang chủ
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1451,15 +1660,28 @@ export default function OrderDetail() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.header, { backgroundColor: theme.header, borderBottomColor: theme.primary + "50" }]}>
-        <Image source={require("../../assets/logo_removed.png")} style={styles.logo} />
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.header,
+            borderBottomColor: theme.primary + "50",
+          },
+        ]}
+      >
+        <Image
+          source={require("../../assets/logo_removed.png")}
+          style={styles.logo}
+        />
         <View style={{ flex: 1 }}>
           <Text style={[styles.company, { color: theme.headerText }]}>
             Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
           </Text>
         </View>
         <View style={[styles.roleIndicator, { backgroundColor: theme.badge }]}>
-          <Text style={[styles.roleIndicatorText, { color: theme.badgeText }]}>{getRoleName(roleId)}</Text>
+          <Text style={[styles.roleIndicatorText, { color: theme.badgeText }]}>
+            {getRoleName(roleId)}
+          </Text>
         </View>
       </View>
 
@@ -1475,10 +1697,31 @@ export default function OrderDetail() {
         </View>
 
         <View style={styles.orderHeader}>
-          <Text style={[styles.orderId, { color: theme.primary }]}>#{stage?.task_id ?? "--"}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(detail.production_status) + "20", borderColor: getStatusColor(detail.production_status) }]}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(detail.production_status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(detail.production_status) }]}>
+          <Text style={[styles.orderId, { color: theme.primary }]}>
+            #{stage?.task_id ?? "--"}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  getStatusColor(detail.production_status) + "20",
+                borderColor: getStatusColor(detail.production_status),
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: getStatusColor(detail.production_status) },
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(detail.production_status) },
+              ]}
+            >
               {getStatusText(detail.production_status)}
             </Text>
           </View>
@@ -1489,7 +1732,9 @@ export default function OrderDetail() {
             <Ionicons name="settings-outline" size={18} color={theme.primary} />
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.metaLabel}>Công đoạn</Text>
-              <Text style={[styles.metaValue, { color: theme.primary }]}>{stage?.process_name ?? "--"}</Text>
+              <Text style={[styles.metaValue, { color: theme.primary }]}>
+                {stage?.process_name ?? "--"}
+              </Text>
             </View>
           </View>
           <View style={styles.metaDivider} />
@@ -1497,24 +1742,40 @@ export default function OrderDetail() {
             <Feather name="calendar" size={18} color={theme.primary} />
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.metaLabel}>Hạn hoàn thành</Text>
-              <Text style={styles.metaValue}>{formatDate(stage?.planned_end_time) || "--"}</Text>
+              <Text style={styles.metaValue}>
+                {formatDate(stage?.planned_end_time) || "--"}
+              </Text>
             </View>
           </View>
         </View>
 
         {stage?.process_name && stageImages[stage.process_name] ? (
           <View style={styles.fileBox}>
-            <Text style={styles.fileLabel}>Hình minh họa công đoạn {stage.process_name}</Text>
-            <TouchableOpacity activeOpacity={0.85} onPress={() => setLocalPreviewVisible(true)}>
-              <Image source={stageImages[stage.process_name]} style={styles.fileImage} />
+            <Text style={styles.fileLabel}>
+              Hình minh họa công đoạn {stage.process_name}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setLocalPreviewVisible(true)}
+            >
+              <Image
+                source={stageImages[stage.process_name]}
+                style={styles.fileImage}
+              />
             </TouchableOpacity>
             <Text style={styles.fileHint}>Nhấn vào để xem chi tiết</Text>
           </View>
         ) : showPrintFile && detail.ready_print_file ? (
           <View style={styles.fileBox}>
             <Text style={styles.fileLabel}>File in ấn</Text>
-            <TouchableOpacity activeOpacity={0.85} onPress={() => setPreviewVisible(true)}>
-              <Image source={{ uri: detail.ready_print_file }} style={styles.fileImage} />
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setPreviewVisible(true)}
+            >
+              <Image
+                source={{ uri: detail.ready_print_file }}
+                style={styles.fileImage}
+              />
             </TouchableOpacity>
             <Text style={styles.fileHint}>Nhấn vào để xem chi tiết</Text>
           </View>
@@ -1525,27 +1786,65 @@ export default function OrderDetail() {
         <View style={styles.infoBox}>
           {stage?.input_materials && stage.input_materials.length > 0 ? (
             <View style={{ marginBottom: 12, marginTop: 12 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
                 <Feather name="download" size={18} color={theme.primary} />
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#374151", marginLeft: 8 }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: "#374151",
+                    marginLeft: 8,
+                  }}
+                >
                   Nguyên liệu đầu vào
                 </Text>
               </View>
               <View style={styles.tableHeader}>
                 <Text style={[styles.th, { flex: 2 }]}>Tên nguyên liệu</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>Số lượng</Text>
-                <Text style={[styles.th, { width: 60, textAlign: "center" }]}>Đơn vị</Text>
+                <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
+                  Số lượng
+                </Text>
+                <Text style={[styles.th, { width: 60, textAlign: "center" }]}>
+                  Đơn vị
+                </Text>
               </View>
               {stage.input_materials.map((mat, idx) => (
-                <View key={idx} style={[styles.tableRow, idx % 2 === 0 && { backgroundColor: "#f9fafb" }]}>
-                  <Text style={[styles.td, { flex: 2 }]}>{mat.name || "Nguyên liệu"}</Text>
-                  <Text style={[styles.td, { flex: 1, textAlign: "center", fontWeight: "600" }]}>{mat.quantity ?? 0}</Text>
-                  <Text style={[styles.td, { width: 60, textAlign: "center" }]}>{mat.unit || "--"}</Text>
+                <View
+                  key={idx}
+                  style={[
+                    styles.tableRow,
+                    idx % 2 === 0 && { backgroundColor: "#f9fafb" },
+                  ]}
+                >
+                  <Text style={[styles.td, { flex: 2 }]}>
+                    {mat.name || "Nguyên liệu"}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.td,
+                      { flex: 1, textAlign: "center", fontWeight: "600" },
+                    ]}
+                  >
+                    {mat.quantity ?? 0}
+                  </Text>
+                  <Text style={[styles.td, { width: 60, textAlign: "center" }]}>
+                    {mat.unit || "--"}
+                  </Text>
                 </View>
               ))}
             </View>
           ) : (
-            <InfoRow icon={<Feather name="download" size={18} color="#4b5563" />} label="Nguyên liệu đầu vào" value="--" />
+            <InfoRow
+              icon={<Feather name="download" size={18} color="#4b5563" />}
+              label="Nguyên liệu đầu vào"
+              value="--"
+            />
           )}
           <InfoRow
             icon={<Ionicons name="cube-outline" size={18} color="#4b5563" />}
@@ -1553,21 +1852,49 @@ export default function OrderDetail() {
             value={`${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.name ?? "--"}`}
           />
           <InfoRow
-            icon={<Ionicons name="checkmark-done-outline" size={18} color="#4b5563" />}
+            icon={
+              <Ionicons
+                name="checkmark-done-outline"
+                size={18}
+                color="#4b5563"
+              />
+            }
             label="Thành phẩm thực tế"
-            value={stage?.qty_good != null && stage.qty_good > 0 ? `${stage.qty_good} ${stage?.output_product?.unit ?? ""}` : "--"}
-            valueStyle={stage?.qty_good != null && stage.qty_good > 0 ? { color: "#16a34a", fontWeight: "600" } : { color: "#9ca3af" }}
+            value={
+              stage?.qty_good != null && stage.qty_good > 0
+                ? `${stage.qty_good} ${stage?.output_product?.unit ?? ""}`
+                : "--"
+            }
+            valueStyle={
+              stage?.qty_good != null && stage.qty_good > 0
+                ? { color: "#16a34a", fontWeight: "600" }
+                : { color: "#9ca3af" }
+            }
           />
           <InfoRow
-            icon={<Ionicons name="play-circle-outline" size={20} color="#4b5563" />}
+            icon={
+              <Ionicons name="play-circle-outline" size={20} color="#4b5563" />
+            }
             label="Bắt đầu sản xuất"
-            value={stage?.start_time ? formatDate(stage.start_time) : "Chưa bắt đầu"}
+            value={
+              stage?.start_time ? formatDate(stage.start_time) : "Chưa bắt đầu"
+            }
           />
           <InfoRow
-            icon={<Ionicons name="stop-circle-outline" size={20} color="#4b5563" />}
+            icon={
+              <Ionicons name="stop-circle-outline" size={20} color="#4b5563" />
+            }
             label="Hoàn thành sản xuất"
-            value={isStageFinished && stage?.end_time ? formatDate(stage.end_time) : "Chưa hoàn thành"}
-            valueStyle={isStageFinished ? { color: "#16a34a", fontWeight: "600" } : { color: "#9ca3af" }}
+            value={
+              isStageFinished && stage?.end_time
+                ? formatDate(stage.end_time)
+                : "Chưa hoàn thành"
+            }
+            valueStyle={
+              isStageFinished
+                ? { color: "#16a34a", fontWeight: "600" }
+                : { color: "#9ca3af" }
+            }
             noBorder
           />
         </View>
@@ -1575,11 +1902,16 @@ export default function OrderDetail() {
         {isStageFinished ? (
           <View style={styles.buttonFinished}>
             <Ionicons name="checkmark-circle" size={22} color="#fff" />
-            <Text style={styles.buttonFinishedText}>Đã hoàn thành công đoạn</Text>
+            <Text style={styles.buttonFinishedText}>
+              Đã hoàn thành công đoạn
+            </Text>
           </View>
         ) : isStageReady ? (
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
+            style={[
+              styles.button,
+              { backgroundColor: theme.primary, shadowColor: theme.primary },
+            ]}
             onPress={() => {
               setQuantity(String(stage?.output_product?.quantity ?? ""));
               setQuantityError("");
@@ -1595,7 +1927,10 @@ export default function OrderDetail() {
           <TouchableOpacity
             style={[
               styles.readyButton,
-              !isPrevStageFinished && { backgroundColor: "#9ca3af", shadowColor: "#9ca3af" },
+              !isPrevStageFinished && {
+                backgroundColor: "#9ca3af",
+                shadowColor: "#9ca3af",
+              },
             ]}
             onPress={setTaskReady}
             activeOpacity={0.85}
@@ -1606,7 +1941,9 @@ export default function OrderDetail() {
             ) : (
               <Ionicons name="play-circle" size={22} color="#fff" />
             )}
-            <Text style={styles.buttonText}>{readyLoading ? "Đang xử lý..." : "Bắt đầu sản xuất"}</Text>
+            <Text style={styles.buttonText}>
+              {readyLoading ? "Đang xử lý..." : "Bắt đầu sản xuất"}
+            </Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -1615,57 +1952,145 @@ export default function OrderDetail() {
       <Modal transparent visible={modalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { maxHeight: "92%" }]}>
-            <View style={[styles.modalTitleRow, { borderLeftColor: theme.primary }]}>
-              <Text style={styles.modalTitle}>Báo cáo công đoạn {stage?.process_name}</Text>
+            <View
+              style={[styles.modalTitleRow, { borderLeftColor: theme.primary }]}
+            >
+              <Text style={styles.modalTitle}>
+                Báo cáo công đoạn {stage?.process_name}
+              </Text>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-
               {/* ---- Bảng nguyên liệu đầu vào (GIỮ NGUYÊN) ---- */}
               {stage?.input_materials && stage.input_materials.length > 0 && (
                 <View style={styles.sectionBlock}>
                   <Text style={styles.sectionLabel}>Nguyên liệu đầu vào</Text>
                   <View style={styles.tableHeader}>
-                    <Text style={[styles.th, { flex: 2 }]}>Tên nguyên liệu</Text>
-                    <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>Số lượng</Text>
-                    <Text style={[styles.th, { width: 60, textAlign: "center" }]}>Đơn vị</Text>
+                    <Text style={[styles.th, { flex: 2 }]}>
+                      Tên nguyên liệu
+                    </Text>
+                    <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
+                      Số lượng
+                    </Text>
+                    <Text
+                      style={[styles.th, { width: 60, textAlign: "center" }]}
+                    >
+                      Đơn vị
+                    </Text>
                   </View>
                   {stage.input_materials.map((mat, idx) => (
-                    <View key={idx} style={[styles.tableRow, idx % 2 === 0 && { backgroundColor: "#f9fafb" }]}>
-                      <Text style={[styles.td, { flex: 2 }]}>{mat.name || "Nguyên liệu"}</Text>
-                      <Text style={[styles.td, { flex: 1, textAlign: "center", fontWeight: "600" }]}>{mat.quantity ?? 0}</Text>
-                      <Text style={[styles.td, { width: 60, textAlign: "center" }]}>{mat.unit || "--"}</Text>
+                    <View
+                      key={idx}
+                      style={[
+                        styles.tableRow,
+                        idx % 2 === 0 && { backgroundColor: "#f9fafb" },
+                      ]}
+                    >
+                      <Text style={[styles.td, { flex: 2 }]}>
+                        {mat.name || "Nguyên liệu"}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.td,
+                          { flex: 1, textAlign: "center", fontWeight: "600" },
+                        ]}
+                      >
+                        {mat.quantity ?? 0}
+                      </Text>
+                      <Text
+                        style={[styles.td, { width: 60, textAlign: "center" }]}
+                      >
+                        {mat.unit || "--"}
+                      </Text>
                     </View>
                   ))}
                 </View>
               )}
 
               {prepareLoading ? (
-                <ActivityIndicator size="small" color={theme.primary} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary}
+                  style={{ marginVertical: 16 }}
+                />
               ) : (
                 <>
                   {/* ---- Manual toggle (optional) ---- */}
                   {showManualToggle && (
                     <TouchableOpacity
-                      style={[modalStyles.toggleRow, { borderColor: theme.badge, backgroundColor: theme.light }]}
-                      onPress={() => setUseManualInputToggle(!useManualInputToggle)}
+                      style={[
+                        modalStyles.toggleRow,
+                        {
+                          borderColor: theme.badge,
+                          backgroundColor: theme.light,
+                        },
+                      ]}
+                      onPress={() =>
+                        setUseManualInputToggle(!useManualInputToggle)
+                      }
                       activeOpacity={0.8}
                     >
                       <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={[modalStyles.toggleTitle, { color: theme.badgeText }]}>Nhập kho bán thành phẩm</Text>
+                        <Text
+                          style={[
+                            modalStyles.toggleTitle,
+                            { color: theme.badgeText },
+                          ]}
+                        >
+                          Nhập kho bán thành phẩm
+                        </Text>
                       </View>
-                      <View style={[modalStyles.toggleSwitch, { backgroundColor: useManualInputToggle ? theme.primary : "#d1d5db" }]}>
-                        <View style={[modalStyles.toggleKnob, { alignSelf: useManualInputToggle ? "flex-end" : "flex-start" }]} />
+                      <View
+                        style={[
+                          modalStyles.toggleSwitch,
+                          {
+                            backgroundColor: useManualInputToggle
+                              ? theme.primary
+                              : "#d1d5db",
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            modalStyles.toggleKnob,
+                            {
+                              alignSelf: useManualInputToggle
+                                ? "flex-end"
+                                : "flex-start",
+                            },
+                          ]}
+                        />
                       </View>
                     </TouchableOpacity>
                   )}
 
                   {/* ---- Forced manual banner ---- */}
                   {isManual && !showManualToggle && (
-                    <View style={[modalStyles.infoBanner, { backgroundColor: theme.light, borderColor: theme.badge }]}>
-                      <Text style={[modalStyles.infoBannerTitle, { color: theme.badgeText }]}>Chế độ nhập tay bắt buộc</Text>
-                      <Text style={[modalStyles.infoBannerText, { color: theme.primary }]}>
-                        Công đoạn này yêu cầu nhập chi tiết vật tư, BTP đầu vào và đầu ra.
+                    <View
+                      style={[
+                        modalStyles.infoBanner,
+                        {
+                          backgroundColor: theme.light,
+                          borderColor: theme.badge,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          modalStyles.infoBannerTitle,
+                          { color: theme.badgeText },
+                        ]}
+                      >
+                        Chế độ nhập tay bắt buộc
+                      </Text>
+                      <Text
+                        style={[
+                          modalStyles.infoBannerText,
+                          { color: theme.primary },
+                        ]}
+                      >
+                        Công đoạn này yêu cầu nhập chi tiết vật tư, BTP đầu vào
+                        và đầu ra.
                       </Text>
                     </View>
                   )}
@@ -1674,223 +2099,440 @@ export default function OrderDetail() {
                   {activeMaterials.length > 0 && (
                     <View style={styles.sectionBlock}>
                       <Text style={styles.sectionLabel}>
-                        {isManual ? "Báo cáo Nguyên vật liệu" : "Nguyên liệu dư"}
+                        {isManual
+                          ? "Báo cáo Nguyên vật liệu"
+                          : "Nguyên liệu dư"}
                       </Text>
 
-                      {isManual ? (
-                        /* Manual mode: show used + left pair */
-                        activeMaterials.map((mat) => (
-                          <View
-                            key={mat.material_id}
-                            style={[
-                              modalStyles.matCard,
-                              {
-                                borderColor: materialErrors[mat.material_id]
-                                  ? "#fca5a5"
-                                  : !mat.is_mapped
-                                    ? "#fbbf24"
-                                    : "#e5e7eb",
-                              },
-                            ]}
-                          >
-                            <View style={modalStyles.matLabelRow}>
-                              <Text style={modalStyles.matName}>{mat.material_name}</Text>
-                              <Text style={modalStyles.matHint}>
-                                Định mức: {mat.estimated_input_qty} {mat.unit}
-                              </Text>
-                            </View>
-                            {!mat.is_mapped && (
-                              <View style={modalStyles.warnRow}>
-                                <Ionicons name="warning-outline" size={13} color="#d97706" />
-                                <Text style={modalStyles.warnText}>NVL chưa được map — Vui lòng liên hệ admin</Text>
-                              </View>
-                            )}
-                            <View style={[modalStyles.infoBannerSmall, { backgroundColor: theme.light }]}>
-                              <Ionicons name="information-circle-outline" size={13} color={theme.primary} />
-                              <Text style={[modalStyles.infoBannerSmallText, { color: theme.primary }]}>
-                                Đã dùng + Dư = định mức ({mat.estimated_input_qty} {mat.unit})
-                              </Text>
-                            </View>
-                            <View style={modalStyles.matInputRow}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={modalStyles.inputLabel}>Lượng đã dùng</Text>
-                                <TextInput
-                                  style={[styles.input, { backgroundColor: "#fff", marginBottom: 0 }, materialErrors[mat.material_id] ? styles.inputError : null]}
-                                  keyboardType="numeric"
-                                  placeholder="Nhập lượng dùng"
-                                  placeholderTextColor="#9ca3af"
-                                  value={materialUsedQtys[mat.material_id] ?? ""}
-                                  onChangeText={(t) => handleMaterialUsedChange(mat.material_id, mat.estimated_input_qty, t)}
-                                />
-                              </View>
-                              <View style={{ flex: 1 }}>
-                                <Text style={modalStyles.inputLabel}>Lượng dư hoàn kho</Text>
-                                <TextInput
-                                  style={[styles.input, { backgroundColor: "#fff", marginBottom: 0 }, materialErrors[mat.material_id] ? styles.inputError : null]}
-                                  keyboardType="numeric"
-                                  placeholder="Nhập lượng dư"
-                                  placeholderTextColor="#9ca3af"
-                                  value={materialLeftQtys[mat.material_id] ?? ""}
-                                  onChangeText={(t) => handleMaterialLeftChange(mat.material_id, mat.estimated_input_qty, t)}
-                                />
-                              </View>
-                            </View>
-                            {/* Nhập kho badge */}
-                            <View style={modalStyles.stockBadgeRow}>
-                              <Text style={modalStyles.inputLabel}>Nhập kho:</Text>
-                              <View style={[
-                                modalStyles.stockBadge,
-                                resolveIsStock(parseReportQty(materialLeftQtys[mat.material_id]))
-                                  ? modalStyles.stockBadgeYes
-                                  : modalStyles.stockBadgeNo,
-                              ]}>
-                                <Text style={[
-                                  modalStyles.stockBadgeText,
-                                  resolveIsStock(parseReportQty(materialLeftQtys[mat.material_id]))
-                                    ? { color: "#065f46" }
-                                    : { color: "#6b7280" },
-                                ]}>
-                                  {resolveIsStock(parseReportQty(materialLeftQtys[mat.material_id])) ? "Có" : "Không"}
+                      {isManual
+                        ? /* Manual mode: show used + left pair */
+                          activeMaterials.map((mat) => (
+                            <View
+                              key={mat.material_id}
+                              style={[
+                                modalStyles.matCard,
+                                {
+                                  borderColor: materialErrors[mat.material_id]
+                                    ? "#fca5a5"
+                                    : !mat.is_mapped
+                                      ? "#fbbf24"
+                                      : "#e5e7eb",
+                                },
+                              ]}
+                            >
+                              <View style={modalStyles.matLabelRow}>
+                                <Text style={modalStyles.matName}>
+                                  {mat.material_name}
+                                </Text>
+                                <Text style={modalStyles.matHint}>
+                                  Định mức: {mat.estimated_input_qty} {mat.unit}
                                 </Text>
                               </View>
-                            </View>
-                            {materialErrors[mat.material_id] ? (
-                              <Text style={[styles.fieldError, { marginTop: 4 }]}>{materialErrors[mat.material_id]}</Text>
-                            ) : null}
-                          </View>
-                        ))
-                      ) : (
-                        /* Estimate mode: only left qty */
-                        activeMaterials.map((mat) => (
-                          <View key={mat.material_id} style={styles.materialRow}>
-                            <View style={styles.materialLabelRow}>
-                              <Text style={styles.materialName}>{mat.material_name}</Text>
-                              <Text style={styles.materialHint}>Đã xuất: {mat.estimated_input_qty} {mat.unit}</Text>
-                            </View>
-                            {!mat.is_mapped && (
-                              <View style={modalStyles.warnRow}>
-                                <Ionicons name="warning-outline" size={13} color="#d97706" />
-                                <Text style={modalStyles.warnText}>NVL chưa được map — Vui lòng liên hệ admin</Text>
-                              </View>
-                            )}
-                            <View style={modalStyles.estimateRow}>
-                              <TextInput
-                                style={[styles.input, { flex: 1, textAlign: "right" }, materialErrors[mat.material_id] ? styles.inputError : null]}
-                                keyboardType="numeric"
-                                placeholder="Lượng dư (mặc định: 0)"
-                                placeholderTextColor="#9ca3af"
-                                value={materialLeftQtys[mat.material_id] ?? ""}
-                                onChangeText={(t) => handleMaterialLeftChange(mat.material_id, mat.estimated_input_qty, t)}
-                              />
-                              <View style={[
-                                modalStyles.stockBadge,
-                                resolveIsStock(parseReportQty(materialLeftQtys[mat.material_id]))
-                                  ? modalStyles.stockBadgeYes
-                                  : modalStyles.stockBadgeNo,
-                                { marginLeft: 8, alignSelf: "center" },
-                              ]}>
-                                <Text style={[
-                                  modalStyles.stockBadgeText,
-                                  resolveIsStock(parseReportQty(materialLeftQtys[mat.material_id]))
-                                    ? { color: "#065f46" }
-                                    : { color: "#6b7280" },
-                                ]}>
-                                  {resolveIsStock(parseReportQty(materialLeftQtys[mat.material_id])) ? "Nhập kho" : "Không nhập kho"}
+                              {!mat.is_mapped && (
+                                <View style={modalStyles.warnRow}>
+                                  <Ionicons
+                                    name="warning-outline"
+                                    size={13}
+                                    color="#d97706"
+                                  />
+                                  <Text style={modalStyles.warnText}>
+                                    NVL chưa được map — Vui lòng liên hệ admin
+                                  </Text>
+                                </View>
+                              )}
+                              <View
+                                style={[
+                                  modalStyles.infoBannerSmall,
+                                  { backgroundColor: theme.light },
+                                ]}
+                              >
+                                <Ionicons
+                                  name="information-circle-outline"
+                                  size={13}
+                                  color={theme.primary}
+                                />
+                                <Text
+                                  style={[
+                                    modalStyles.infoBannerSmallText,
+                                    { color: theme.primary },
+                                  ]}
+                                >
+                                  Đã dùng + Dư = định mức (
+                                  {mat.estimated_input_qty} {mat.unit})
                                 </Text>
                               </View>
+                              <View style={modalStyles.matInputRow}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={modalStyles.inputLabel}>
+                                    Lượng đã dùng
+                                  </Text>
+                                  <TextInput
+                                    style={[
+                                      styles.input,
+                                      {
+                                        backgroundColor: "#fff",
+                                        marginBottom: 0,
+                                      },
+                                      materialErrors[mat.material_id]
+                                        ? styles.inputError
+                                        : null,
+                                    ]}
+                                    keyboardType="numeric"
+                                    placeholder="Nhập lượng dùng"
+                                    placeholderTextColor="#9ca3af"
+                                    value={
+                                      materialUsedQtys[mat.material_id] ?? ""
+                                    }
+                                    onChangeText={(t) =>
+                                      handleMaterialUsedChange(
+                                        mat.material_id,
+                                        mat.estimated_input_qty,
+                                        t,
+                                      )
+                                    }
+                                  />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={modalStyles.inputLabel}>
+                                    Lượng dư hoàn kho
+                                  </Text>
+                                  <TextInput
+                                    style={[
+                                      styles.input,
+                                      {
+                                        backgroundColor: "#fff",
+                                        marginBottom: 0,
+                                      },
+                                      materialErrors[mat.material_id]
+                                        ? styles.inputError
+                                        : null,
+                                    ]}
+                                    keyboardType="numeric"
+                                    placeholder="Nhập lượng dư"
+                                    placeholderTextColor="#9ca3af"
+                                    value={
+                                      materialLeftQtys[mat.material_id] ?? ""
+                                    }
+                                    onChangeText={(t) =>
+                                      handleMaterialLeftChange(
+                                        mat.material_id,
+                                        mat.estimated_input_qty,
+                                        t,
+                                      )
+                                    }
+                                  />
+                                </View>
+                              </View>
+                              {/* Nhập kho badge */}
+                              <View style={modalStyles.stockBadgeRow}>
+                                <Text style={modalStyles.inputLabel}>
+                                  Nhập kho:
+                                </Text>
+                                <View
+                                  style={[
+                                    modalStyles.stockBadge,
+                                    resolveIsStock(
+                                      parseReportQty(
+                                        materialLeftQtys[mat.material_id],
+                                      ),
+                                    )
+                                      ? modalStyles.stockBadgeYes
+                                      : modalStyles.stockBadgeNo,
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      modalStyles.stockBadgeText,
+                                      resolveIsStock(
+                                        parseReportQty(
+                                          materialLeftQtys[mat.material_id],
+                                        ),
+                                      )
+                                        ? { color: "#065f46" }
+                                        : { color: "#6b7280" },
+                                    ]}
+                                  >
+                                    {resolveIsStock(
+                                      parseReportQty(
+                                        materialLeftQtys[mat.material_id],
+                                      ),
+                                    )
+                                      ? "Có"
+                                      : "Không"}
+                                  </Text>
+                                </View>
+                              </View>
+                              {materialErrors[mat.material_id] ? (
+                                <Text
+                                  style={[styles.fieldError, { marginTop: 4 }]}
+                                >
+                                  {materialErrors[mat.material_id]}
+                                </Text>
+                              ) : null}
                             </View>
-                            {materialErrors[mat.material_id] ? (
-                              <Text style={styles.fieldError}>{materialErrors[mat.material_id]}</Text>
-                            ) : null}
-                          </View>
-                        ))
-                      )}
+                          ))
+                        : /* Estimate mode: only left qty */
+                          activeMaterials.map((mat) => (
+                            <View
+                              key={mat.material_id}
+                              style={styles.materialRow}
+                            >
+                              <View style={styles.materialLabelRow}>
+                                <Text style={styles.materialName}>
+                                  {mat.material_name}
+                                </Text>
+                                <Text style={styles.materialHint}>
+                                  Đã xuất: {mat.estimated_input_qty} {mat.unit}
+                                </Text>
+                              </View>
+                              {!mat.is_mapped && (
+                                <View style={modalStyles.warnRow}>
+                                  <Ionicons
+                                    name="warning-outline"
+                                    size={13}
+                                    color="#d97706"
+                                  />
+                                  <Text style={modalStyles.warnText}>
+                                    NVL chưa được map — Vui lòng liên hệ admin
+                                  </Text>
+                                </View>
+                              )}
+                              <View style={modalStyles.estimateRow}>
+                                <TextInput
+                                  style={[
+                                    styles.input,
+                                    { flex: 1, textAlign: "right" },
+                                    materialErrors[mat.material_id]
+                                      ? styles.inputError
+                                      : null,
+                                  ]}
+                                  keyboardType="numeric"
+                                  placeholder="Lượng dư (mặc định: 0)"
+                                  placeholderTextColor="#9ca3af"
+                                  value={
+                                    materialLeftQtys[mat.material_id] ?? ""
+                                  }
+                                  onChangeText={(t) =>
+                                    handleMaterialLeftChange(
+                                      mat.material_id,
+                                      mat.estimated_input_qty,
+                                      t,
+                                    )
+                                  }
+                                />
+                                <View
+                                  style={[
+                                    modalStyles.stockBadge,
+                                    resolveIsStock(
+                                      parseReportQty(
+                                        materialLeftQtys[mat.material_id],
+                                      ),
+                                    )
+                                      ? modalStyles.stockBadgeYes
+                                      : modalStyles.stockBadgeNo,
+                                    { marginLeft: 8, alignSelf: "center" },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      modalStyles.stockBadgeText,
+                                      resolveIsStock(
+                                        parseReportQty(
+                                          materialLeftQtys[mat.material_id],
+                                        ),
+                                      )
+                                        ? { color: "#065f46" }
+                                        : { color: "#6b7280" },
+                                    ]}
+                                  >
+                                    {resolveIsStock(
+                                      parseReportQty(
+                                        materialLeftQtys[mat.material_id],
+                                      ),
+                                    )
+                                      ? "Nhập kho"
+                                      : "Không nhập kho"}
+                                  </Text>
+                                </View>
+                              </View>
+                              {materialErrors[mat.material_id] ? (
+                                <Text style={styles.fieldError}>
+                                  {materialErrors[mat.material_id]}
+                                </Text>
+                              ) : null}
+                            </View>
+                          ))}
                     </View>
                   )}
 
                   {/* ---- REFERENCE INPUTS (BTP) — only in manual mode ---- */}
-                  {isManual && qrPrepare?.reference_inputs && qrPrepare.reference_inputs.length > 0 && (
-                    <View style={styles.sectionBlock}>
-                      <Text style={styles.sectionLabel}>Bán thành phẩm đầu vào (BTP)</Text>
-                      {qrPrepare.reference_inputs.map((ref) => (
-                        <View key={ref.input_code} style={modalStyles.refCard}>
-                          <Text style={modalStyles.refName}>{ref.input_name}</Text>
-                          <Text style={modalStyles.refHint}>
-                            Ước tính: {ref.estimated_qty} {ref.unit}
-                            {ref.actual_qty_prev_stage != null
-                              ? `  •  TT CĐ trước: ${Number(ref.actual_qty_prev_stage).toLocaleString("vi-VN")} ${ref.unit}`
-                              : ""}
-                          </Text>
+                  {isManual &&
+                    qrPrepare?.reference_inputs &&
+                    qrPrepare.reference_inputs.length > 0 && (
+                      <View style={styles.sectionBlock}>
+                        <Text style={styles.sectionLabel}>
+                          Bán thành phẩm đầu vào (BTP)
+                        </Text>
+                        {qrPrepare.reference_inputs.map((ref) => (
+                          <View
+                            key={ref.input_code}
+                            style={modalStyles.refCard}
+                          >
+                            <Text style={modalStyles.refName}>
+                              {ref.input_name}
+                            </Text>
+                            <Text style={modalStyles.refHint}>
+                              Ước tính: {ref.estimated_qty} {ref.unit}
+                              {ref.actual_qty_prev_stage != null
+                                ? `  •  TT CĐ trước: ${Number(ref.actual_qty_prev_stage).toLocaleString("vi-VN")} ${ref.unit}`
+                                : ""}
+                            </Text>
 
-                          {ref.actual_qty_prev_stage != null && (
-                            <View style={[modalStyles.infoBannerSmall, { backgroundColor: "#eff6ff", marginBottom: 6 }]}>
-                              <Ionicons name="information-circle-outline" size={13} color="#2563eb" />
-                              <Text style={[modalStyles.infoBannerSmallText, { color: "#2563eb" }]}>
-                                Lượng dư tối đa 15% TT CĐ trước (≤{" "}
-                                {Math.floor(ref.actual_qty_prev_stage * 0.15).toLocaleString("vi-VN")} {ref.unit})
-                              </Text>
-                            </View>
-                          )}
-
-                          <View style={modalStyles.matInputRow}>
-                            <View style={{ flex: 1 }}>
-                              <Text style={modalStyles.inputLabel}>Lượng dư</Text>
-                              <TextInput
+                            {ref.actual_qty_prev_stage != null && (
+                              <View
                                 style={[
-                                  styles.input,
-                                  { backgroundColor: "#fff", marginBottom: 0 },
-                                  refErrors[ref.input_code] ? styles.inputError : null,
+                                  modalStyles.infoBannerSmall,
+                                  {
+                                    backgroundColor: "#eff6ff",
+                                    marginBottom: 6,
+                                  },
                                 ]}
-                                keyboardType="numeric"
-                                placeholder="0"
-                                placeholderTextColor="#9ca3af"
-                                value={refLeftQtys[ref.input_code] ?? ""}
-                                onChangeText={(t) => handleRefLeftChange(ref, t)}
-                              />
-                              {refErrors[ref.input_code] ? (
-                                <Text style={[styles.fieldError, { marginTop: 2 }]}>{refErrors[ref.input_code]}</Text>
-                              ) : null}
+                              >
+                                <Ionicons
+                                  name="information-circle-outline"
+                                  size={13}
+                                  color="#2563eb"
+                                />
+                                <Text
+                                  style={[
+                                    modalStyles.infoBannerSmallText,
+                                    { color: "#2563eb" },
+                                  ]}
+                                >
+                                  Lượng dư tối đa 15% TT CĐ trước (≤{" "}
+                                  {Math.floor(
+                                    ref.actual_qty_prev_stage * 0.15,
+                                  ).toLocaleString("vi-VN")}{" "}
+                                  {ref.unit})
+                                </Text>
+                              </View>
+                            )}
+
+                            <View style={modalStyles.matInputRow}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={modalStyles.inputLabel}>
+                                  Lượng dư
+                                </Text>
+                                <TextInput
+                                  style={[
+                                    styles.input,
+                                    {
+                                      backgroundColor: "#fff",
+                                      marginBottom: 0,
+                                    },
+                                    refErrors[ref.input_code]
+                                      ? styles.inputError
+                                      : null,
+                                  ]}
+                                  keyboardType="numeric"
+                                  placeholder="0"
+                                  placeholderTextColor="#9ca3af"
+                                  value={refLeftQtys[ref.input_code] ?? ""}
+                                  onChangeText={(t) =>
+                                    handleRefLeftChange(ref, t)
+                                  }
+                                />
+                                {refErrors[ref.input_code] ? (
+                                  <Text
+                                    style={[
+                                      styles.fieldError,
+                                      { marginTop: 2 },
+                                    ]}
+                                  >
+                                    {refErrors[ref.input_code]}
+                                  </Text>
+                                ) : null}
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={modalStyles.inputLabel}>
+                                  Đã dùng (tự tính)
+                                </Text>
+                                <View
+                                  style={[
+                                    styles.input,
+                                    {
+                                      backgroundColor: "#f3f4f6",
+                                      marginBottom: 0,
+                                      justifyContent: "center",
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 14,
+                                      color: "#374151",
+                                      fontWeight: "600",
+                                      textAlign: "right",
+                                    }}
+                                  >
+                                    {refUsedQtys[ref.input_code] ?? "—"}
+                                  </Text>
+                                </View>
+                              </View>
                             </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={modalStyles.inputLabel}>Đã dùng (tự tính)</Text>
-                              <View style={[styles.input, { backgroundColor: "#f3f4f6", marginBottom: 0, justifyContent: "center" }]}>
-                                <Text style={{ fontSize: 14, color: "#374151", fontWeight: "600", textAlign: "right" }}>
-                                  {refUsedQtys[ref.input_code] ?? "—"}
+
+                            {/* Nhập kho badge */}
+                            <View
+                              style={[
+                                modalStyles.stockBadgeRow,
+                                { marginTop: 8 },
+                              ]}
+                            >
+                              <Text style={modalStyles.inputLabel}>
+                                Nhập kho:
+                              </Text>
+                              <View
+                                style={[
+                                  modalStyles.stockBadge,
+                                  resolveIsStock(
+                                    parseReportQty(refLeftQtys[ref.input_code]),
+                                  )
+                                    ? modalStyles.stockBadgeYes
+                                    : modalStyles.stockBadgeNo,
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    modalStyles.stockBadgeText,
+                                    resolveIsStock(
+                                      parseReportQty(
+                                        refLeftQtys[ref.input_code],
+                                      ),
+                                    )
+                                      ? { color: "#065f46" }
+                                      : { color: "#6b7280" },
+                                  ]}
+                                >
+                                  {resolveIsStock(
+                                    parseReportQty(refLeftQtys[ref.input_code]),
+                                  )
+                                    ? "Có"
+                                    : "Không"}
                                 </Text>
                               </View>
                             </View>
                           </View>
-
-                          {/* Nhập kho badge */}
-                          <View style={[modalStyles.stockBadgeRow, { marginTop: 8 }]}>
-                            <Text style={modalStyles.inputLabel}>Nhập kho:</Text>
-                            <View style={[
-                              modalStyles.stockBadge,
-                              resolveIsStock(parseReportQty(refLeftQtys[ref.input_code]))
-                                ? modalStyles.stockBadgeYes
-                                : modalStyles.stockBadgeNo,
-                            ]}>
-                              <Text style={[
-                                modalStyles.stockBadgeText,
-                                resolveIsStock(parseReportQty(refLeftQtys[ref.input_code]))
-                                  ? { color: "#065f46" }
-                                  : { color: "#6b7280" },
-                              ]}>
-                                {resolveIsStock(parseReportQty(refLeftQtys[ref.input_code])) ? "Có" : "Không"}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+                        ))}
+                      </View>
+                    )}
 
                   {/* ---- QTY GOOD + QTY BAD ---- */}
                   <View style={styles.sectionBlock}>
                     <View style={styles.sectionHeaderRow}>
                       <Text style={styles.sectionLabel}>Sản lượng Báo cáo</Text>
                       <Text style={styles.unitText}>
-                        ĐVT: {qrPrepare?.qty_unit ?? stage?.output_product?.unit}
+                        ĐVT:{" "}
+                        {qrPrepare?.qty_unit ?? stage?.output_product?.unit}
                       </Text>
                     </View>
 
@@ -1901,7 +2543,11 @@ export default function OrderDetail() {
                         style={[
                           styles.input,
                           quantityError ? styles.inputError : null,
-                          { backgroundColor: "#fff", textAlign: "right", marginBottom: 0 },
+                          {
+                            backgroundColor: "#fff",
+                            textAlign: "right",
+                            marginBottom: 0,
+                          },
                         ]}
                         keyboardType="numeric"
                         placeholder={`Mặc định: ${qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? "--"}`}
@@ -1910,12 +2556,14 @@ export default function OrderDetail() {
                         onChangeText={handleQuantityChange}
                       />
                       {quantityError ? (
-                        <Text style={[styles.fieldError, { marginTop: 4 }]}>{quantityError}</Text>
+                        <Text style={[styles.fieldError, { marginTop: 4 }]}>
+                          {quantityError}
+                        </Text>
                       ) : null}
                     </View>
 
                     {/* Qty bad */}
-                    <View style={{ marginTop: 12 }}>
+                    {/* <View style={{ marginTop: 12 }}>
                       <Text style={modalStyles.inputLabel}>Số lượng hỏng / lỗi</Text>
                       <TextInput
                         style={[
@@ -1949,18 +2597,29 @@ export default function OrderDetail() {
                           return <Text style={[styles.fieldError, { marginTop: 4 }]}>Số lượng hỏng không được lớn hơn số lượng đạt</Text>;
                         return null;
                       })()}
-                    </View>
+                    </View> */}
                   </View>
 
                   {/* ---- IMAGES ---- */}
                   <View style={styles.sectionBlock}>
-                    <Text style={styles.sectionLabel}>Ảnh báo cáo (tối đa 4)</Text>
-                    <Text style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+                    <Text style={styles.sectionLabel}>
+                      Ảnh báo cáo (tối đa 4)
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: "#6b7280",
+                        marginBottom: 10,
+                      }}
+                    >
                       Chụp ảnh sản phẩm / công đoạn để báo cáo
                     </Text>
                     <View style={imgStyles.btnRow}>
                       <TouchableOpacity
-                        style={[imgStyles.captureBtn, { backgroundColor: theme.primary }]}
+                        style={[
+                          imgStyles.captureBtn,
+                          { backgroundColor: theme.primary },
+                        ]}
                         onPress={takePhoto}
                         activeOpacity={0.8}
                       >
@@ -1968,7 +2627,10 @@ export default function OrderDetail() {
                         <Text style={imgStyles.captureBtnText}>Chụp ảnh</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[imgStyles.captureBtn, { backgroundColor: theme.primary + "cc" }]}
+                        style={[
+                          imgStyles.captureBtn,
+                          { backgroundColor: theme.primary + "cc" },
+                        ]}
                         onPress={pickImage}
                         activeOpacity={0.8}
                       >
@@ -1982,19 +2644,39 @@ export default function OrderDetail() {
                           <View key={idx} style={imgStyles.thumbWrap}>
                             <TouchableOpacity
                               activeOpacity={0.9}
-                              onPress={() => { setPreviewImageUri(img.uri); setImagePreviewVisible(true); }}
+                              onPress={() => {
+                                setPreviewImageUri(img.uri);
+                                setImagePreviewVisible(true);
+                              }}
                             >
-                              <Image source={{ uri: img.uri }} style={imgStyles.thumb} />
+                              <Image
+                                source={{ uri: img.uri }}
+                                style={imgStyles.thumb}
+                              />
                             </TouchableOpacity>
-                            <TouchableOpacity style={imgStyles.removeBtn} onPress={() => removeImage(idx)}>
-                              <Ionicons name="close-circle" size={22} color="#ef4444" />
+                            <TouchableOpacity
+                              style={imgStyles.removeBtn}
+                              onPress={() => removeImage(idx)}
+                            >
+                              <Ionicons
+                                name="close-circle"
+                                size={22}
+                                color="#ef4444"
+                              />
                             </TouchableOpacity>
                           </View>
                         ))}
                       </View>
                     )}
                     {capturedImages.length > 0 && (
-                      <Text style={{ fontSize: 11, color: capturedImages.length > 0 ? "#16a34a" : "#9ca3af", marginTop: 4 }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color:
+                            capturedImages.length > 0 ? "#16a34a" : "#9ca3af",
+                          marginTop: 4,
+                        }}
+                      >
                         {capturedImages.length}/4 ảnh đã chọn
                       </Text>
                     )}
@@ -2004,7 +2686,10 @@ export default function OrderDetail() {
                   <View style={styles.sectionBlock}>
                     <Text style={styles.sectionLabel}>Ghi chú / Lý do</Text>
                     <TextInput
-                      style={[styles.input, { minHeight: 60, textAlignVertical: "top" }]}
+                      style={[
+                        styles.input,
+                        { minHeight: 60, textAlignVertical: "top" },
+                      ]}
                       placeholder="Nhập lý do hoặc ghi chú (không bắt buộc)"
                       placeholderTextColor="#9ca3af"
                       value={reason}
@@ -2060,25 +2745,55 @@ export default function OrderDetail() {
             >
               {qrData && (
                 <>
-                  <View style={[styles.qrWrapper, { borderColor: theme.badge }]}>
-                    <QRCode value={qrData.token} size={200} color={theme.primary} />
+                  <View
+                    style={[styles.qrWrapper, { borderColor: theme.badge }]}
+                  >
+                    <QRCode
+                      value={qrData.token}
+                      size={200}
+                      color={theme.primary}
+                    />
                   </View>
                   <Text style={styles.qrQty}>
-                    Số lượng: {qrData.qty_good_used} {stage?.output_product.unit}
+                    Số lượng: {qrData.qty_good_used}{" "}
+                    {stage?.output_product.unit}
                   </Text>
-                  <View style={[styles.tokenBox, { backgroundColor: theme.light }]}>
+                  <View
+                    style={[styles.tokenBox, { backgroundColor: theme.light }]}
+                  >
                     <Text style={styles.tokenLabel}>Mã xác nhận</Text>
                     <View style={styles.tokenRow}>
-                      <Text style={[styles.tokenValue, { color: theme.primary }]} numberOfLines={1} ellipsizeMode="middle">
+                      <Text
+                        style={[styles.tokenValue, { color: theme.primary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="middle"
+                      >
                         {qrData.token}
                       </Text>
                       <TouchableOpacity
-                        style={[styles.copyBtn, { backgroundColor: theme.light, borderColor: theme.badge }, tokenCopied && styles.copyBtnSuccess]}
+                        style={[
+                          styles.copyBtn,
+                          {
+                            backgroundColor: theme.light,
+                            borderColor: theme.badge,
+                          },
+                          tokenCopied && styles.copyBtnSuccess,
+                        ]}
                         onPress={() => copyToken(qrData.token)}
                         activeOpacity={0.75}
                       >
-                        <Ionicons name={tokenCopied ? "checkmark" : "copy-outline"} size={16} color={tokenCopied ? "#16a34a" : theme.primary} />
-                        <Text style={[styles.copyBtnText, { color: theme.primary }, tokenCopied && { color: "#16a34a" }]}>
+                        <Ionicons
+                          name={tokenCopied ? "checkmark" : "copy-outline"}
+                          size={16}
+                          color={tokenCopied ? "#16a34a" : theme.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.copyBtnText,
+                            { color: theme.primary },
+                            tokenCopied && { color: "#16a34a" },
+                          ]}
+                        >
                           {tokenCopied ? "Đã copy" : "Copy"}
                         </Text>
                       </TouchableOpacity>
@@ -2087,7 +2802,10 @@ export default function OrderDetail() {
                 </>
               )}
               <TouchableOpacity
-                style={[styles.cancelBtn, { marginTop: 10, alignSelf: "center" }]}
+                style={[
+                  styles.cancelBtn,
+                  { marginTop: 10, alignSelf: "center" },
+                ]}
                 onPress={() => setQrVisible(false)}
               >
                 <Text style={styles.cancelText}>Đóng</Text>
@@ -2101,10 +2819,28 @@ export default function OrderDetail() {
       <Modal transparent visible={successVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Ionicons name="checkmark-circle" size={64} color="#16a34a" style={{ alignSelf: "center", marginBottom: 12 }} />
-            <Text style={[styles.modalTitle, { textAlign: "center" }]}>Thành công!</Text>
-            <Text style={{ textAlign: "center", marginBottom: 24, color: "#4b5563" }}>Công đoạn đã được hoàn thành.</Text>
-            <TouchableOpacity style={[styles.okBtn, { backgroundColor: theme.primary }]} onPress={() => setSuccessVisible(false)}>
+            <Ionicons
+              name="checkmark-circle"
+              size={64}
+              color="#16a34a"
+              style={{ alignSelf: "center", marginBottom: 12 }}
+            />
+            <Text style={[styles.modalTitle, { textAlign: "center" }]}>
+              Thành công!
+            </Text>
+            <Text
+              style={{
+                textAlign: "center",
+                marginBottom: 24,
+                color: "#4b5563",
+              }}
+            >
+              Công đoạn đã được hoàn thành.
+            </Text>
+            <TouchableOpacity
+              style={[styles.okBtn, { backgroundColor: theme.primary }]}
+              onPress={() => setSuccessVisible(false)}
+            >
               <Text style={[styles.okText, { textAlign: "center" }]}>OK</Text>
             </TouchableOpacity>
           </View>
@@ -2115,10 +2851,28 @@ export default function OrderDetail() {
       <Modal transparent visible={errorVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Ionicons name="alert-circle" size={64} color="#ef4444" style={{ alignSelf: "center", marginBottom: 12 }} />
-            <Text style={[styles.modalTitle, { textAlign: "center" }]}>Lỗi</Text>
-            <Text style={{ textAlign: "center", marginBottom: 24, color: "#4b5563" }}>{errorMessage}</Text>
-            <TouchableOpacity style={[styles.okBtn, { backgroundColor: theme.primary }]} onPress={() => setErrorVisible(false)}>
+            <Ionicons
+              name="alert-circle"
+              size={64}
+              color="#ef4444"
+              style={{ alignSelf: "center", marginBottom: 12 }}
+            />
+            <Text style={[styles.modalTitle, { textAlign: "center" }]}>
+              Lỗi
+            </Text>
+            <Text
+              style={{
+                textAlign: "center",
+                marginBottom: 24,
+                color: "#4b5563",
+              }}
+            >
+              {errorMessage}
+            </Text>
+            <TouchableOpacity
+              style={[styles.okBtn, { backgroundColor: theme.primary }]}
+              onPress={() => setErrorVisible(false)}
+            >
               <Text style={[styles.okText, { textAlign: "center" }]}>OK</Text>
             </TouchableOpacity>
           </View>
@@ -2128,29 +2882,50 @@ export default function OrderDetail() {
       {/* IMAGE PREVIEW */}
       <Modal visible={previewVisible} transparent>
         <View style={styles.previewOverlay}>
-          <TouchableOpacity style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }} onPress={() => setPreviewVisible(false)}>
+          <TouchableOpacity
+            style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }}
+            onPress={() => setPreviewVisible(false)}
+          >
             <Ionicons name="close" size={32} color="#fff" />
           </TouchableOpacity>
-          <Image source={{ uri: detail?.ready_print_file }} style={styles.previewImage} resizeMode="contain" />
+          <Image
+            source={{ uri: detail?.ready_print_file }}
+            style={styles.previewImage}
+            resizeMode="contain"
+          />
         </View>
       </Modal>
       <Modal visible={localPreviewVisible} transparent>
         <View style={styles.previewOverlay}>
-          <TouchableOpacity style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }} onPress={() => setLocalPreviewVisible(false)}>
+          <TouchableOpacity
+            style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }}
+            onPress={() => setLocalPreviewVisible(false)}
+          >
             <Ionicons name="close" size={32} color="#fff" />
           </TouchableOpacity>
           {stage?.process_name && stageImages[stage.process_name] && (
-            <Image source={stageImages[stage.process_name]} style={styles.previewImage} resizeMode="contain" />
+            <Image
+              source={stageImages[stage.process_name]}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
           )}
         </View>
       </Modal>
       <Modal visible={imagePreviewVisible} transparent>
         <View style={styles.previewOverlay}>
-          <TouchableOpacity style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }} onPress={() => setImagePreviewVisible(false)}>
+          <TouchableOpacity
+            style={{ position: "absolute", top: 50, right: 20, zIndex: 10 }}
+            onPress={() => setImagePreviewVisible(false)}
+          >
             <Ionicons name="close" size={32} color="#fff" />
           </TouchableOpacity>
           {previewImageUri ? (
-            <Image source={{ uri: previewImageUri }} style={styles.previewImage} resizeMode="contain" />
+            <Image
+              source={{ uri: previewImageUri }}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
           ) : null}
         </View>
       </Modal>
@@ -2184,10 +2959,22 @@ function InfoRow({
 }
 
 const infoRowStyles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
   icon: { width: 32, alignItems: "center" },
   content: { flex: 1, marginLeft: 8 },
-  label: { fontSize: 11, color: "#9ca3af", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  label: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   value: { fontSize: 14, color: "#111827", fontWeight: "500" },
 });
 
@@ -2204,8 +2991,20 @@ const modalStyles = StyleSheet.create({
   },
   toggleTitle: { fontSize: 13, fontWeight: "700", marginBottom: 2 },
   toggleSubtitle: { fontSize: 11 },
-  toggleSwitch: { width: 48, height: 26, borderRadius: 13, padding: 2, justifyContent: "center" },
-  toggleKnob: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff", elevation: 2 },
+  toggleSwitch: {
+    width: 48,
+    height: 26,
+    borderRadius: 13,
+    padding: 2,
+    justifyContent: "center",
+  },
+  toggleKnob: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#fff",
+    elevation: 2,
+  },
   infoBanner: {
     padding: 12,
     borderRadius: 8,
@@ -2231,8 +3030,19 @@ const modalStyles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 12,
   },
-  matLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  matName: { fontSize: 13, fontWeight: "700", color: "#111827", flex: 1, marginRight: 8 },
+  matLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  matName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    flex: 1,
+    marginRight: 8,
+  },
   matHint: { fontSize: 11, color: "#4b5563", fontWeight: "500" },
   warnRow: {
     flexDirection: "row",
@@ -2247,7 +3057,12 @@ const modalStyles = StyleSheet.create({
   },
   warnText: { fontSize: 11, color: "#d97706", fontWeight: "600", flex: 1 },
   matInputRow: { flexDirection: "row", gap: 10, marginTop: 8 },
-  inputLabel: { fontSize: 11, color: "#4b5563", marginBottom: 4, fontWeight: "600" },
+  inputLabel: {
+    fontSize: 11,
+    color: "#4b5563",
+    marginBottom: 4,
+    fontWeight: "600",
+  },
   estimateRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
   stockBadgeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   stockBadge: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
@@ -2262,85 +3077,340 @@ const modalStyles = StyleSheet.create({
     borderColor: "#e5e7eb",
     marginBottom: 12,
   },
-  refName: { fontSize: 13, fontWeight: "700", color: "#111827", marginBottom: 2 },
+  refName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
+  },
   refHint: { fontSize: 11, color: "#6b7280", marginBottom: 6 },
 });
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
   logo: { width: 56, height: 38, resizeMode: "contain", marginRight: 10 },
   company: { flex: 1, fontSize: 12, lineHeight: 18 },
-  roleIndicator: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  roleIndicator: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   roleIndicatorText: { fontSize: 12, fontWeight: "700" },
-  titleRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginRight: 10 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
   pageTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
   orderHeader: { alignItems: "center", paddingVertical: 12 },
   orderId: { fontSize: 26, fontWeight: "800", letterSpacing: 1 },
-  statusBadge: { flexDirection: "row", alignItems: "center", marginTop: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
   statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
   statusText: { fontSize: 13, fontWeight: "600" },
-  infoBox: { backgroundColor: "#fff", marginHorizontal: 16, paddingHorizontal: 16, borderRadius: 12, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  metaBox: { flexDirection: "row", backgroundColor: "#fff", marginHorizontal: 16, borderRadius: 12, marginBottom: 20, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 2, overflow: "hidden" },
-  metaItem: { flex: 1, flexDirection: "row", alignItems: "center", padding: 14 },
+  infoBox: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  metaBox: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    overflow: "hidden",
+  },
+  metaItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+  },
   metaDivider: { width: 1, backgroundColor: "#e5e7eb", marginVertical: 10 },
-  metaLabel: { fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 },
+  metaLabel: {
+    fontSize: 11,
+    color: "#9ca3af",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
   metaValue: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  button: { flexDirection: "row", marginHorizontal: 16, padding: 16, borderRadius: 12, justifyContent: "center", alignItems: "center", shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 },
-  buttonText: { marginLeft: 10, fontWeight: "700", color: "#fff", fontSize: 16 },
-  readyButton: { flexDirection: "row", backgroundColor: "#f59e0b", marginHorizontal: 16, padding: 16, borderRadius: 12, justifyContent: "center", alignItems: "center", shadowColor: "#f59e0b", shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 },
-  buttonFinished: { flexDirection: "row", backgroundColor: "#16a34a", marginHorizontal: 16, padding: 16, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  buttonFinishedText: { marginLeft: 10, fontWeight: "700", color: "#fff", fontSize: 16 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center" },
-  modalBox: { width: "85%", backgroundColor: "#fff", padding: 24, borderRadius: 16, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 },
-  modalTitleRow: { borderLeftWidth: 4, borderRadius: 0, paddingLeft: 10, marginBottom: 16 },
+  button: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonText: {
+    marginLeft: 10,
+    fontWeight: "700",
+    color: "#fff",
+    fontSize: 16,
+  },
+  readyButton: {
+    flexDirection: "row",
+    backgroundColor: "#f59e0b",
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#f59e0b",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonFinished: {
+    flexDirection: "row",
+    backgroundColor: "#16a34a",
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonFinishedText: {
+    marginLeft: 10,
+    fontWeight: "700",
+    color: "#fff",
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    width: "85%",
+    backgroundColor: "#fff",
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalTitleRow: {
+    borderLeftWidth: 4,
+    borderRadius: 0,
+    paddingLeft: 10,
+    marginBottom: 16,
+  },
   modalTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
   sectionBlock: { marginBottom: 16 },
-  sectionLabel: { fontSize: 12, fontWeight: "700", color: "#374151", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#374151",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
   materialRow: { marginBottom: 8 },
-  materialLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  materialLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   materialName: { fontSize: 13, fontWeight: "600", color: "#111827" },
   materialHint: { fontSize: 11, color: "#9ca3af" },
-  qrBox: { width: "88%", maxHeight: "85%", backgroundColor: "#fff", padding: 24, borderRadius: 16, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 },
-  qrWrapper: { padding: 16, borderRadius: 12, backgroundColor: "#f8fafc", borderWidth: 1, marginVertical: 12 },
-  qrQty: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 10 },
+  qrBox: {
+    width: "88%",
+    maxHeight: "85%",
+    backgroundColor: "#fff",
+    padding: 24,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  qrWrapper: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    marginVertical: 12,
+  },
+  qrQty: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 10,
+  },
   tokenBox: { borderRadius: 8, padding: 10, width: "100%", marginBottom: 12 },
-  tokenLabel: { fontSize: 11, color: "#9ca3af", marginBottom: 6, textAlign: "center" },
+  tokenLabel: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginBottom: 6,
+    textAlign: "center",
+  },
   tokenRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   tokenValue: { flex: 1, fontSize: 13, fontWeight: "700", letterSpacing: 0.5 },
-  copyBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1 },
+  copyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
   copyBtnSuccess: { backgroundColor: "#f0fdf4", borderColor: "#bbf7d0" },
   copyBtnText: { fontSize: 12, fontWeight: "600" },
-  input: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 12, marginBottom: 4, fontSize: 14, color: "#111827", backgroundColor: "#f9fafb", width: "100%" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 4,
+    fontSize: 14,
+    color: "#111827",
+    backgroundColor: "#f9fafb",
+    width: "100%",
+  },
   inputError: { borderColor: "#ef4444" },
   fieldError: { color: "#ef4444", fontSize: 12, marginBottom: 6 },
-  modalButtons: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 8 },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: "#f3f4f6" },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 8,
+  },
+  cancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+  },
   cancelText: { color: "#374151", fontWeight: "600" },
   okBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
   okBtnDisabled: { opacity: 0.5 },
   okText: { color: "#fff", fontWeight: "700" },
-  fileBox: { backgroundColor: "#fff", marginHorizontal: 16, padding: 16, borderRadius: 12, marginBottom: 16, alignItems: "center" },
-  fileLabel: { fontSize: 13, fontWeight: "700", color: "#111827", marginBottom: 10 },
-  fileImage: { width: width - 80, height: 180, borderRadius: 10, resizeMode: "cover", borderWidth: 1, borderColor: "#e5e7eb" },
+  fileBox: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  fileLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 10,
+  },
+  fileImage: {
+    width: width - 80,
+    height: 180,
+    borderRadius: 10,
+    resizeMode: "cover",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
   fileHint: { marginTop: 8, fontSize: 11, color: "#6b7280" },
-  previewOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "center", alignItems: "center" },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   previewImage: { width: "100%", height: "80%" },
-  sectionHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   unitText: { fontSize: 12, color: "#6b7280" },
-  tableHeader: { flexDirection: "row", backgroundColor: "#e5e7eb", borderTopLeftRadius: 8, borderTopRightRadius: 8, paddingVertical: 10, paddingHorizontal: 10 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e5e7eb", paddingVertical: 10, paddingHorizontal: 10 },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#e5e7eb",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
   th: { fontSize: 12, fontWeight: "700", color: "#374151" },
   td: { fontSize: 13, color: "#111827" },
 });
 
 const imgStyles = StyleSheet.create({
   btnRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  captureBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 8, gap: 6 },
+  captureBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
   captureBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
   thumbRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   thumbWrap: { position: "relative" },
-  thumb: { width: 72, height: 72, borderRadius: 8, borderWidth: 1, borderColor: "#e5e7eb" },
-  removeBtn: { position: "absolute", top: -6, right: -6, backgroundColor: "#fff", borderRadius: 11 },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  removeBtn: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#fff",
+    borderRadius: 11,
+  },
 });

@@ -7,7 +7,7 @@
         "projectId": "0a55f692-4208-47eb-94e6-8268c3d18609"
       }
     },
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/logo_removed.png",
     "scheme": "productionstaff",
@@ -23,7 +23,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.khanhtnse184544.staffproduction"
+      "package": "com.khanhtnse184544.staffproduction",
+      "versionCode": 2
     },
     "web": {
       "output": "static",
