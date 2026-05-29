@@ -733,10 +733,14 @@ export default function OrderDetail() {
 
   const shouldExcludeMaterial = (matName: string) => {
     const lowerName = matName.toLowerCase();
-    const currentProcess = stage?.process_name;
-    if (currentProcess === "Ralo" && lowerName.includes("kẽm")) return true;
+    const currentProcess = stage?.process_name || "";
+    const lowerProcess = currentProcess.toLowerCase();
+
+    // Ở công đoạn ralo và cắt thì không cần Nhập kho nguyên vật liệu
+    if (["ralo", "cắt", "cat"].includes(lowerProcess)) return true;
+
     if (
-      currentProcess === "In" &&
+      lowerProcess === "in" &&
       (lowerName.includes("giấy") || lowerName.includes("giay"))
     )
       return true;
@@ -1364,6 +1368,31 @@ export default function OrderDetail() {
         return false;
       }
 
+      if (
+        qrPrepare?.reference_inputs &&
+        qrPrepare.reference_inputs.length > 0
+      ) {
+        let maxPrevQty = 0;
+        qrPrepare.reference_inputs.forEach((ref) => {
+          if (
+            ref.actual_qty_prev_stage &&
+            ref.actual_qty_prev_stage > maxPrevQty
+          ) {
+            maxPrevQty = ref.actual_qty_prev_stage;
+          }
+        });
+        if (maxPrevQty > 0) {
+          const minRequired = maxPrevQty * 0.85;
+          if (qty < minRequired) {
+            setErrorMessage(
+              `Sản lượng đạt không được bé hơn 85% của thực tế công đoạn trước (Tối thiểu: ${minRequired.toLocaleString("vi-VN", { maximumFractionDigits: 2 })})`,
+            );
+            setErrorVisible(true);
+            return false;
+          }
+        }
+      }
+
       // --- Validate qty_bad ---
       const badQty = Number(qtyBad || 0);
       if (isNaN(badQty) || badQty < 0) {
@@ -1848,7 +1877,7 @@ export default function OrderDetail() {
           )}
           <InfoRow
             icon={<Ionicons name="cube-outline" size={18} color="#4b5563" />}
-            label="Sản lượng mục tiêu"
+            label="Thành phẩm đầu ra ước tính từ đầu"
             value={`${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.name ?? "--"}`}
           />
           <InfoRow
@@ -1970,7 +1999,12 @@ export default function OrderDetail() {
                       Tên nguyên liệu
                     </Text>
                     <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
-                      Số lượng
+                      Định mức
+                    </Text>
+                    <Text
+                      style={[styles.th, { flex: 1.5, textAlign: "center" }]}
+                    >
+                      TT CĐ trước
                     </Text>
                     <Text
                       style={[styles.th, { width: 60, textAlign: "center" }]}
@@ -1978,32 +2012,56 @@ export default function OrderDetail() {
                       Đơn vị
                     </Text>
                   </View>
-                  {stage.input_materials.map((mat, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.tableRow,
-                        idx % 2 === 0 && { backgroundColor: "#f9fafb" },
-                      ]}
-                    >
-                      <Text style={[styles.td, { flex: 2 }]}>
-                        {mat.name || "Nguyên liệu"}
-                      </Text>
-                      <Text
+                  {stage.input_materials.map((mat, idx) => {
+                    const ref = qrPrepare?.reference_inputs?.find(
+                      (r) => r.input_code === mat.code,
+                    );
+                    const prevQty = ref?.actual_qty_prev_stage;
+                    return (
+                      <View
+                        key={idx}
                         style={[
-                          styles.td,
-                          { flex: 1, textAlign: "center", fontWeight: "600" },
+                          styles.tableRow,
+                          idx % 2 === 0 && { backgroundColor: "#f9fafb" },
                         ]}
                       >
-                        {mat.quantity ?? 0}
-                      </Text>
-                      <Text
-                        style={[styles.td, { width: 60, textAlign: "center" }]}
-                      >
-                        {mat.unit || "--"}
-                      </Text>
-                    </View>
-                  ))}
+                        <Text style={[styles.td, { flex: 2 }]}>
+                          {mat.name || "Nguyên liệu"}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.td,
+                            { flex: 1, textAlign: "center", fontWeight: "600" },
+                          ]}
+                        >
+                          {mat.quantity ?? 0}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.td,
+                            {
+                              flex: 1.5,
+                              textAlign: "center",
+                              color: prevQty != null ? "#2563eb" : "#6b7280",
+                              fontWeight: prevQty != null ? "600" : "400",
+                            },
+                          ]}
+                        >
+                          {prevQty != null
+                            ? Number(prevQty).toLocaleString("vi-VN")
+                            : "--"}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.td,
+                            { width: 60, textAlign: "center" },
+                          ]}
+                        >
+                          {mat.unit || "--"}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
 
@@ -2100,8 +2158,8 @@ export default function OrderDetail() {
                     <View style={styles.sectionBlock}>
                       <Text style={styles.sectionLabel}>
                         {isManual
-                          ? "Báo cáo Nguyên vật liệu"
-                          : "Nguyên liệu dư"}
+                          ? "Nhập kho nguyên vật liệu"
+                          : "Nhập kho nguyên vật liệu"}
                       </Text>
 
                       {isManual
@@ -2371,7 +2429,7 @@ export default function OrderDetail() {
                     qrPrepare.reference_inputs.length > 0 && (
                       <View style={styles.sectionBlock}>
                         <Text style={styles.sectionLabel}>
-                          Bán thành phẩm đầu vào (BTP)
+                          Nhập kho bán thành phẩm
                         </Text>
                         {qrPrepare.reference_inputs.map((ref) => (
                           <View
