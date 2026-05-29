@@ -2,8 +2,9 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Dimensions,
   FlatList,
   Image,
@@ -17,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { API_BASE_URL } from "../constants/api";
-import { getConnection, startSignalR } from "../hooks/signalr";
+import { getConnection, joinMachineGroups, startSignalR } from "../hooks/signalr";
 
 const connection = getConnection();
 const { width } = Dimensions.get("window");
@@ -35,6 +36,17 @@ type FilterKey =
   | "UNASSIGNED";
 
 type CompletionStatus = "EARLY" | "ON_TIME" | "LATE" | "NONE";
+
+type Notification = {
+  id: number;
+  content: string;
+  is_check: boolean;
+  order_request_id: number;
+  role_id: number;
+  status: boolean;
+  time: string;
+  user_id: number;
+};
 
 export type Order = {
   order_id: number | null;
@@ -398,6 +410,15 @@ export default function Home() {
   const [selectedProcess, setSelectedProcess] = useState<string>("ALL");
   const allowedProcesses = useMemo(() => getAllowedProcesses(role), [role]);
 
+  /* ================= NOTIFICATION STATE ================= */
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifList, setShowNotifList] = useState(false);
+  const [activeToast, setActiveToast] = useState<Notification | null>(null);
+
+  const slideAnim = useRef(new Animated.Value(-150)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const theme = getRoleTheme(role);
 
   /* ================= COLOR ================= */
@@ -523,6 +544,23 @@ export default function Home() {
         ).values(),
       ) as Order[];
       setOrders(unique);
+
+      // Fetch DB notifications using the staff-get-noti API
+      try {
+        const notifRes = await fetch(
+          `${API_BASE_URL}/api/Notifications/staff-get-noti?role=${role}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (notifRes.ok) {
+          const notifText = await notifRes.text();
+          if (notifText) {
+            const notifData = JSON.parse(notifText);
+            setNotifications(Array.isArray(notifData) ? notifData : notifData.data ?? []);
+          }
+        }
+      } catch (e) {
+        console.log("Fetch notifications failed:", e);
+      }
     } catch (err) {
       console.log("Fetch error:", err);
     } finally {
@@ -588,17 +626,111 @@ export default function Home() {
     setSelectedProcess("ALL");
   }, [role]);
 
+  /* ================= NOTIFICATION HELPERS ================= */
+
+  const showNotification = (notif: Notification) => {
+    setNotifications((prev) => {
+      // Avoid duplicate IDs
+      if (prev.some((n) => n.id === notif.id)) return prev;
+      return [notif, ...prev];
+    });
+    setActiveToast(notif);
+
+    // Animate in
+    slideAnim.setValue(-150);
+    opacityAnim.setValue(0);
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 60,
+        friction: 8,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Auto dismiss after 8s
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => dismissNotification(), 8000);
+  };
+
+  const dismissNotification = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: -150,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setActiveToast(null);
+    });
+  };
+
+  const handleNotificationPress = async (notif: Notification) => {
+    dismissNotification();
+    setShowNotifList(false);
+
+    // Mark as checked in local state
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notif.id ? { ...n, is_check: true } : n))
+    );
+
+    // Call API to mark as check/read
+    try {
+      const token = await SecureStore.getItemAsync("jwt");
+      await fetch(`${API_BASE_URL}/api/Notifications/check-read/${notif.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.log("Failed to mark notification read:", e);
+    }
+
+    router.push({
+      pathname: "/order/[id]",
+      params: { id: notif.order_request_id, type: "single" },
+    });
+  };
+
+  const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_check: true })));
+    try {
+      const token = await SecureStore.getItemAsync("jwt");
+      await fetch(`${API_BASE_URL}/api/Notifications/check-read-all`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.log("Failed to mark all as read:", e);
+    }
+  };
+
   /* ================= EFFECT ================= */
 
   useEffect(() => {
     const loadRole = async () => {
       const roleId = await SecureStore.getItemAsync("role_id");
-      if (roleId) setRole(getRoleName(roleId));
+      if (roleId) {
+        const roleName = getRoleName(roleId);
+        setRole(roleName);
+
+        // Join machine group sau khi SignalR connected
+        await startSignalR();
+        await joinMachineGroups(roleName);
+      }
       fetchOrders();
     };
 
     loadRole();
-    startSignalR();
 
     const handleRealtime = (data: any) => {
       setOrders((prev) =>
@@ -610,9 +742,35 @@ export default function Home() {
       );
     };
 
+    /* Lắng nghe "next task" event từ BE */
+    const handleNextTask = (data: any) => {
+      console.log("Received next task notification:", data);
+
+      // Parse prod_id và task_id từ message
+      const match = data.message?.match(/(\d+)\s*-\s*(\d+)/);
+      const prod_id = match ? parseInt(match[1]) : 0;
+
+      // Map to db notification schema
+      const notif: Notification = {
+        id: Date.now(),
+        content: data.message || "Có lệnh sản xuất mới sẵn sàng",
+        is_check: false,
+        order_request_id: prod_id,
+        role_id: 0,
+        status: true,
+        time: new Date().toISOString(),
+        user_id: 0,
+      };
+
+      showNotification(notif);
+    };
+
     connection.on("request.changed", handleRealtime);
+    connection.on("next task", handleNextTask);
     return () => {
       connection.off("request.changed", handleRealtime);
+      connection.off("next task", handleNextTask);
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
   }, []);
 
@@ -736,6 +894,115 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* ===== NOTIFICATION TOAST (REALTIME BANNER) ===== */}
+      {activeToast && (
+        <Animated.View
+          style={[
+            styles.notifContainer,
+            {
+              transform: [{ translateY: slideAnim }],
+              opacity: opacityAnim,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.notifCard, { borderLeftColor: theme.primary }]}
+            onPress={() => handleNotificationPress(activeToast)}
+          >
+            <View style={styles.notifHeader}>
+              <View style={[styles.notifIconWrap, { backgroundColor: theme.light }]}>
+                <Ionicons name="notifications" size={20} color={theme.primary} />
+              </View>
+              <View style={styles.notifTitleWrap}>
+                <Text style={[styles.notifTitle, { color: theme.primary }]}>
+                  🔔 Thông báo sản xuất mới
+                </Text>
+              </View>
+              <TouchableOpacity onPress={dismissNotification} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.notifMessage} numberOfLines={2}>
+              {activeToast.content}
+            </Text>
+            <View style={styles.notifFooter}>
+              <Text style={[styles.notifAction, { color: theme.primary }]}>
+                Nhấn để xem chi tiết →
+              </Text>
+              <Text style={styles.notifTime}>
+                {new Date(activeToast.time).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* ===== NOTIFICATION LIST OVERLAY / SCREEN MODAL ===== */}
+      {showNotifList && (
+        <View style={styles.notifListOverlay}>
+          <SafeAreaView style={{ flex: 1 }}>
+            <View style={styles.notifListHeader}>
+              <TouchableOpacity onPress={() => setShowNotifList(false)}>
+                <Ionicons name="arrow-back" size={24} color="#1f2937" />
+              </TouchableOpacity>
+              <Text style={styles.notifListTitle}>Thông báo công việc</Text>
+              <TouchableOpacity onPress={handleMarkAllRead}>
+                <Text style={[styles.notifMarkAllBtn, { color: theme.primary }]}>Đọc tất cả</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={notifications}
+              keyExtractor={(item) => String(item.id)}
+              contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
+              ListEmptyComponent={
+                <View style={styles.emptyNotifBox}>
+                  <View style={[styles.emptyNotifIconWrap, { backgroundColor: theme.light }]}>
+                    <Ionicons name="notifications-off" size={48} color={theme.primary} />
+                  </View>
+                  <Text style={styles.emptyNotifText}>Chưa có thông báo nào dành cho bạn</Text>
+                  <Text style={styles.emptyNotifSubtext}>
+                    Các thông báo về lệnh sản xuất và công việc sẽ xuất hiện tại đây.
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.emptyCloseBtn, { backgroundColor: theme.primary }]}
+                    onPress={() => setShowNotifList(false)}
+                  >
+                    <Text style={styles.emptyCloseBtnText}>Quay lại trang chủ</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.notifListItemCard,
+                    !item.is_check && styles.notifListItemUnread,
+                  ]}
+                  onPress={() => handleNotificationPress(item)}
+                >
+                  <View style={[styles.notifDot, { backgroundColor: item.is_check ? "transparent" : theme.primary }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.notifListItemText, !item.is_check && styles.notifListItemTextUnread]}>
+                      {item.content}
+                    </Text>
+                    <Text style={styles.notifListItemTime}>
+                      {new Date(item.time).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+                </TouchableOpacity>
+              )}
+            />
+          </SafeAreaView>
+        </View>
+      )}
+
       {/* HEADER — màu theo role */}
       <View
         style={[
@@ -743,16 +1010,33 @@ export default function Home() {
           {
             backgroundColor: theme.header,
             borderBottomColor: theme.primary + "40",
+            justifyContent: "space-between",
           },
         ]}
       >
-        <Image
-          source={require("../assets/logo_removed.png")}
-          style={styles.logo}
-        />
-        <Text style={[styles.company, { color: theme.headerText }]}>
-          Công Ty TNHH Thương Mại Và Dịch Vụ{"\n"}In & Bao Bì Đại Phúc Hải
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+          <Image
+            source={require("../assets/logo_removed.png")}
+            style={styles.logo}
+          />
+          <Text style={[styles.company, { color: theme.headerText }]} numberOfLines={2}>
+            Công Ty TNHH Thương Mại Và Dịch Vụ In & Bao Bì Đại Phúc Hải
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.bellButton}
+          onPress={() => setShowNotifList(true)}
+        >
+          <Ionicons name="notifications-outline" size={24} color={theme.primary} />
+          {notifications.filter((n) => !n.is_check).length > 0 && (
+            <View style={[styles.bellBadge, { backgroundColor: "#ef4444" }]}>
+              <Text style={styles.bellBadgeText}>
+                {notifications.filter((n) => !n.is_check).length}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* ROLE BADGE */}
@@ -1073,5 +1357,208 @@ const styles = StyleSheet.create({
   processTabText: {
     fontSize: 13,
     fontWeight: "500",
+  },
+
+  /* ===== NOTIFICATION STYLES ===== */
+  notifContainer: {
+    position: "absolute",
+    top: 50,
+    left: 12,
+    right: 12,
+    zIndex: 9999,
+    elevation: 20,
+  },
+  notifCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    borderLeftWidth: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  notifHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  notifIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  notifTitleWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  notifTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  notifCountBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  notifCountText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  notifMessage: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
+    marginBottom: 8,
+    paddingLeft: 46,
+  },
+  notifFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingLeft: 46,
+  },
+  notifAction: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  notifTime: {
+    fontSize: 11,
+    color: "#9ca3af",
+  },
+  bellButton: {
+    padding: 8,
+    position: "relative",
+    marginLeft: 8,
+  },
+  bellBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  notifListOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#f3f4f6",
+    zIndex: 99999,
+  },
+  notifListHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#fff",
+  },
+  notifListTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1f2937",
+  },
+  notifMarkAllBtn: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyNotifBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 80,
+    paddingHorizontal: 32,
+  },
+  emptyNotifIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  emptyNotifText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#374151",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptyNotifSubtext: {
+    fontSize: 14,
+    color: "#6b7280",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  emptyCloseBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  emptyCloseBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  notifListItemCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  notifListItemUnread: {
+    backgroundColor: "#f9fafb",
+    borderLeftWidth: 3,
+    borderLeftColor: "#ef4444",
+  },
+  notifDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  notifListItemText: {
+    fontSize: 14,
+    color: "#4b5563",
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  notifListItemTextUnread: {
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  notifListItemTime: {
+    fontSize: 12,
+    color: "#9ca3af",
   },
 });
