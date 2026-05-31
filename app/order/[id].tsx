@@ -1068,6 +1068,12 @@ export default function OrderDetail() {
     if (id) fetchDetail();
   }, [id]);
 
+  useEffect(() => {
+    if (stage?.task_id && stage.status !== "Finished") {
+      fetchQrPrepare(stage.task_id); // 👈 fetch sớm để có ref data
+    }
+  }, [stage?.task_id, roleId]);
+
   const fetchQrPrepare = async (taskId: number) => {
     try {
       setPrepareLoading(true);
@@ -1837,36 +1843,67 @@ export default function OrderDetail() {
               <View style={styles.tableHeader}>
                 <Text style={[styles.th, { flex: 2 }]}>Tên nguyên liệu</Text>
                 <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
-                  Số lượng
+                  Định mức
                 </Text>
-                <Text style={[styles.th, { width: 60, textAlign: "center" }]}>
-                  Đơn vị
+                <Text style={[styles.th, { flex: 1, textAlign: "center" }]}>
+                  Thực tế
+                </Text>
+                <Text style={[styles.th, { width: 44, textAlign: "center" }]}>
+                  ĐVT
                 </Text>
               </View>
-              {stage.input_materials.map((mat, idx) => (
-                <View
-                  key={idx}
-                  style={[
-                    styles.tableRow,
-                    idx % 2 === 0 && { backgroundColor: "#f9fafb" },
-                  ]}
-                >
-                  <Text style={[styles.td, { flex: 2 }]}>
-                    {mat.name || "Nguyên liệu"}
-                  </Text>
-                  <Text
+              {stage.input_materials.map((mat, idx) => {
+                const ref = qrPrepare?.reference_inputs?.find(
+                  (r) =>
+                    r.input_code === mat.code ||
+                    r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
+                );
+                const prevQty = ref?.actual_qty_prev_stage;
+                return (
+                  <View
+                    key={idx}
                     style={[
-                      styles.td,
-                      { flex: 1, textAlign: "center", fontWeight: "600" },
+                      styles.tableRow,
+                      idx % 2 === 0 && { backgroundColor: "#f9fafb" },
                     ]}
                   >
-                    {mat.quantity ?? 0}
-                  </Text>
-                  <Text style={[styles.td, { width: 60, textAlign: "center" }]}>
-                    {mat.unit || "--"}
-                  </Text>
-                </View>
-              ))}
+                    <Text style={[styles.td, { flex: 2 }]}>
+                      {mat.name || "Nguyên liệu"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.td,
+                        { flex: 1, textAlign: "center", fontWeight: "600" },
+                      ]}
+                    >
+                      {mat.quantity ?? 0}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.td,
+                        {
+                          flex: 1,
+                          textAlign: "center",
+                          fontWeight: prevQty != null ? "600" : "400",
+                          color: prevQty != null ? "#2563eb" : "#9ca3af",
+                        },
+                      ]}
+                    >
+                      {prevQty != null
+                        ? Number(prevQty).toLocaleString("vi-VN")
+                        : "--"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.td,
+                        { width: 44, textAlign: "center", color: "#6b7280" },
+                      ]}
+                    >
+                      {mat.unit || "--"}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           ) : (
             <InfoRow
@@ -1878,6 +1915,7 @@ export default function OrderDetail() {
           <InfoRow
             icon={<Ionicons name="cube-outline" size={18} color="#4b5563" />}
             label="Thành phẩm đầu ra ước tính từ đầu"
+            note="* Hiệu suất đạt 100%" // 👈 thêm dòng này
             value={`${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.name ?? "--"}`}
           />
           <InfoRow
@@ -2014,7 +2052,9 @@ export default function OrderDetail() {
                   </View>
                   {stage.input_materials.map((mat, idx) => {
                     const ref = qrPrepare?.reference_inputs?.find(
-                      (r) => r.input_code === mat.code,
+                      (r) =>
+                        r.input_code === mat.code ||
+                        r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
                     );
                     const prevQty = ref?.actual_qty_prev_stage;
                     return (
@@ -2054,7 +2094,7 @@ export default function OrderDetail() {
                         <Text
                           style={[
                             styles.td,
-                            { width: 60, textAlign: "center" },
+                            { width: 30, textAlign: "center" },
                           ]}
                         >
                           {mat.unit || "--"}
@@ -2998,18 +3038,23 @@ function InfoRow({
   value,
   valueStyle,
   noBorder,
+  note,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   valueStyle?: object;
   noBorder?: boolean;
+  note?: string;
 }) {
   return (
     <View style={[infoRowStyles.row, noBorder && { borderBottomWidth: 0 }]}>
       <View style={infoRowStyles.icon}>{icon}</View>
       <View style={infoRowStyles.content}>
         {label ? <Text style={infoRowStyles.label}>{label}</Text> : null}
+        {note ? ( // 👈 thêm note
+          <Text style={infoRowStyles.note}>{note}</Text>
+        ) : null}
         <Text style={[infoRowStyles.value, valueStyle]}>{value}</Text>
       </View>
     </View>
@@ -3034,6 +3079,12 @@ const infoRowStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   value: { fontSize: 14, color: "#111827", fontWeight: "500" },
+  note: {
+    fontSize: 11,
+    color: "#9ca3af",
+    fontStyle: "italic",
+    marginTop: 2,
+  },
 });
 
 /* ---- Modal-specific styles ---- */

@@ -656,7 +656,7 @@ export default function Dashboard() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ height: 58, marginBottom: 8 }} // 👈 thêm dòng này
+          style={{ height: 62, marginBottom: 8 }} // 👈 thêm dòng này
           contentContainerStyle={styles.tabsScroll}
         >
           {(["ALL", ...allowedProcesses] as string[]).map((p, i) => {
@@ -689,7 +689,7 @@ export default function Dashboard() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ height: 50, marginBottom: 4 }} // 👈 thêm dòng này
+        style={{ height: 64, marginBottom: 4 }} // 👈 thêm dòng này
         contentContainerStyle={styles.statusScroll}
       >
         {STATUS_FILTER_KEYS.map((key, i) => {
