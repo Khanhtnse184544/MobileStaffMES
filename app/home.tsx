@@ -2,7 +2,13 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Dimensions,
@@ -18,7 +24,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { API_BASE_URL } from "../constants/api";
-import { getConnection, joinMachineGroups, startSignalR } from "../hooks/signalr";
+import {
+  getConnection,
+  joinMachineGroups,
+  startSignalR,
+} from "../hooks/signalr";
 
 const connection = getConnection();
 const { width } = Dimensions.get("window");
@@ -549,13 +559,15 @@ export default function Home() {
       try {
         const notifRes = await fetch(
           `${API_BASE_URL}/api/Notifications/staff-get-noti?role=${role}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         if (notifRes.ok) {
           const notifText = await notifRes.text();
           if (notifText) {
             const notifData = JSON.parse(notifText);
-            setNotifications(Array.isArray(notifData) ? notifData : notifData.data ?? []);
+            setNotifications(
+              Array.isArray(notifData) ? notifData : (notifData.data ?? []),
+            );
           }
         }
       } catch (e) {
@@ -572,7 +584,11 @@ export default function Home() {
 
   const filteredOrders = useMemo(() => {
     return orders
-      .filter((o) => getDisplayStatus(o, role) !== "HIDDEN")
+      .filter(
+        (o) =>
+          getDisplayStatus(o, role) !== "HIDDEN" &&
+          o.production_approval_flow !== "WAITING_MANAGER",
+      )
       .filter((o) => {
         if (!role) return true;
         const allowed = getAllowedProcesses(role);
@@ -681,7 +697,7 @@ export default function Home() {
 
     // Mark as checked in local state
     setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, is_check: true } : n))
+      prev.map((n) => (n.id === notif.id ? { ...n, is_check: true } : n)),
     );
 
     // Call API to mark as check/read
@@ -689,7 +705,7 @@ export default function Home() {
       const token = await SecureStore.getItemAsync("jwt");
       await fetch(`${API_BASE_URL}/api/Notifications/check-read/${notif.id}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch (e) {
       console.log("Failed to mark notification read:", e);
@@ -707,7 +723,7 @@ export default function Home() {
       const token = await SecureStore.getItemAsync("jwt");
       await fetch(`${API_BASE_URL}/api/Notifications/check-read-all`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch (e) {
       console.log("Failed to mark all as read:", e);
@@ -817,31 +833,34 @@ export default function Home() {
           })
         }
       >
-        <View style={styles.headerRow}>
-          {completionStatus !== "NONE" && (
-            <Text
-              style={{
-                color: getCompletionColor(completionStatus),
-                fontWeight: "bold",
-                marginBottom: 6,
-              }}
-            >
-              {getCompletionText(completionStatus)}
-            </Text>
-          )}
+        <View style={styles.headerContainer}>
           <Text style={[styles.orderId, { color: theme.primary }]}>
-            Lệnh: #{item.prod_id} - {stage?.process_name || "--"}{" "}
-            {isDisabled && "🔒"}
+            Lệnh: #{item.prod_id} - {stage?.process_name || "--"} - #
+            {stage?.task_id}
+            {isDisabled && " 🔒"}
           </Text>
 
-          <Text
-            style={[
-              styles.priorityBadge,
-              { backgroundColor: FILTER_COLOR[priority] },
-            ]}
-          >
-            {getPriorityText(priority)}
-          </Text>
+          <View style={styles.badgeRow}>
+            {/* {completionStatus !== "NONE" && (
+              <Text
+                style={{
+                  color: getCompletionColor(completionStatus),
+                  fontWeight: "bold",
+                }}
+              >
+                {getCompletionText(completionStatus)}
+              </Text>
+            )} */}
+
+            <Text
+              style={[
+                styles.priorityBadge,
+                { backgroundColor: FILTER_COLOR[priority] },
+              ]}
+            >
+              {getPriorityText(priority)}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.row}>
@@ -911,15 +930,24 @@ export default function Home() {
             onPress={() => handleNotificationPress(activeToast)}
           >
             <View style={styles.notifHeader}>
-              <View style={[styles.notifIconWrap, { backgroundColor: theme.light }]}>
-                <Ionicons name="notifications" size={20} color={theme.primary} />
+              <View
+                style={[styles.notifIconWrap, { backgroundColor: theme.light }]}
+              >
+                <Ionicons
+                  name="notifications"
+                  size={20}
+                  color={theme.primary}
+                />
               </View>
               <View style={styles.notifTitleWrap}>
                 <Text style={[styles.notifTitle, { color: theme.primary }]}>
                   🔔 Thông báo sản xuất mới
                 </Text>
               </View>
-              <TouchableOpacity onPress={dismissNotification} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={dismissNotification}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Ionicons name="close" size={20} color="#9ca3af" />
               </TouchableOpacity>
             </View>
@@ -931,7 +959,10 @@ export default function Home() {
                 Nhấn để xem chi tiết →
               </Text>
               <Text style={styles.notifTime}>
-                {new Date(activeToast.time).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                {new Date(activeToast.time).toLocaleTimeString("vi-VN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </Text>
             </View>
           </TouchableOpacity>
@@ -948,7 +979,11 @@ export default function Home() {
               </TouchableOpacity>
               <Text style={styles.notifListTitle}>Thông báo công việc</Text>
               <TouchableOpacity onPress={handleMarkAllRead}>
-                <Text style={[styles.notifMarkAllBtn, { color: theme.primary }]}>Đọc tất cả</Text>
+                <Text
+                  style={[styles.notifMarkAllBtn, { color: theme.primary }]}
+                >
+                  Đọc tất cả
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -958,18 +993,35 @@ export default function Home() {
               contentContainerStyle={{ padding: 16, paddingBottom: 50 }}
               ListEmptyComponent={
                 <View style={styles.emptyNotifBox}>
-                  <View style={[styles.emptyNotifIconWrap, { backgroundColor: theme.light }]}>
-                    <Ionicons name="notifications-off" size={48} color={theme.primary} />
+                  <View
+                    style={[
+                      styles.emptyNotifIconWrap,
+                      { backgroundColor: theme.light },
+                    ]}
+                  >
+                    <Ionicons
+                      name="notifications-off"
+                      size={48}
+                      color={theme.primary}
+                    />
                   </View>
-                  <Text style={styles.emptyNotifText}>Chưa có thông báo nào dành cho bạn</Text>
+                  <Text style={styles.emptyNotifText}>
+                    Chưa có thông báo nào dành cho bạn
+                  </Text>
                   <Text style={styles.emptyNotifSubtext}>
-                    Các thông báo về lệnh sản xuất và công việc sẽ xuất hiện tại đây.
+                    Các thông báo về lệnh sản xuất và công việc sẽ xuất hiện tại
+                    đây.
                   </Text>
                   <TouchableOpacity
-                    style={[styles.emptyCloseBtn, { backgroundColor: theme.primary }]}
+                    style={[
+                      styles.emptyCloseBtn,
+                      { backgroundColor: theme.primary },
+                    ]}
                     onPress={() => setShowNotifList(false)}
                   >
-                    <Text style={styles.emptyCloseBtnText}>Quay lại trang chủ</Text>
+                    <Text style={styles.emptyCloseBtnText}>
+                      Quay lại trang chủ
+                    </Text>
                   </TouchableOpacity>
                 </View>
               }
@@ -981,9 +1033,23 @@ export default function Home() {
                   ]}
                   onPress={() => handleNotificationPress(item)}
                 >
-                  <View style={[styles.notifDot, { backgroundColor: item.is_check ? "transparent" : theme.primary }]} />
+                  <View
+                    style={[
+                      styles.notifDot,
+                      {
+                        backgroundColor: item.is_check
+                          ? "transparent"
+                          : theme.primary,
+                      },
+                    ]}
+                  />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.notifListItemText, !item.is_check && styles.notifListItemTextUnread]}>
+                    <Text
+                      style={[
+                        styles.notifListItemText,
+                        !item.is_check && styles.notifListItemTextUnread,
+                      ]}
+                    >
                       {item.content}
                     </Text>
                     <Text style={styles.notifListItemTime}>
@@ -1019,7 +1085,10 @@ export default function Home() {
             source={require("../assets/logo_removed.png")}
             style={styles.logo}
           />
-          <Text style={[styles.company, { color: theme.headerText }]} numberOfLines={2}>
+          <Text
+            style={[styles.company, { color: theme.headerText }]}
+            numberOfLines={2}
+          >
             Công Ty TNHH Thương Mại Và Dịch Vụ In & Bao Bì Đại Phúc Hải
           </Text>
         </View>
@@ -1028,7 +1097,11 @@ export default function Home() {
           style={styles.bellButton}
           onPress={() => setShowNotifList(true)}
         >
-          <Ionicons name="notifications-outline" size={24} color={theme.primary} />
+          <Ionicons
+            name="notifications-outline"
+            size={24}
+            color={theme.primary}
+          />
           {notifications.filter((n) => !n.is_check).length > 0 && (
             <View style={[styles.bellBadge, { backgroundColor: "#ef4444" }]}>
               <Text style={styles.bellBadgeText}>
@@ -1452,6 +1525,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 9,
     fontWeight: "bold",
+  },
+  headerContainer: {
+    marginBottom: 10,
+  },
+
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
   },
   notifListOverlay: {
     position: "absolute",

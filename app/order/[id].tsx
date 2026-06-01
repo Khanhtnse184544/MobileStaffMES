@@ -196,12 +196,14 @@ type Stage = {
     name: string;
     code: string;
     quantity: number;
+    actual_quantity: number;
     unit: string;
   }[];
   output_product: {
     name: string;
     code: string;
     quantity: number;
+    actual_quantity: number;
     unit: string;
   };
 };
@@ -1269,70 +1271,14 @@ export default function OrderDetail() {
         );
         if (unmapped.length > 0) {
           setErrorMessage(
-            `Các NVL sau chưa được map, vui lòng liên hệ admin:\n${unmapped.map((m) => `• ${m.material_name}`).join("\n")}`,
+            `Các NVL sau chưa được map:\n${unmapped.map((m) => `• ${m.material_name}`).join("\n")}`,
           );
           setErrorVisible(true);
           return false;
         }
-
-        // Check duplicate material_id
-        const activeIds = qrPrepare.consumable_materials
-          .filter((m) => !shouldExcludeMaterial(m.material_name))
-          .map((m) => m.material_id);
-        if (activeIds.length !== new Set(activeIds).size) {
-          setErrorMessage(
-            "Có NVL bị trùng trong danh sách. Vui lòng kiểm tra lại.",
-          );
-          setErrorVisible(true);
-          return false;
-        }
-
-        // Validate each material
         for (const mat of qrPrepare.consumable_materials) {
           if (shouldExcludeMaterial(mat.material_name) || mat._isPaperInPrint)
             continue;
-          if (manualMode) {
-            const usedNum = parseReportQty(materialUsedQtys[mat.material_id]);
-            const leftNum = parseReportQty(materialLeftQtys[mat.material_id]);
-            if (usedNum < 0 || leftNum < 0) {
-              setMaterialErrors((prev) => ({
-                ...prev,
-                [mat.material_id]: "Số lượng không được âm",
-              }));
-              setErrorMessage("Vui lòng kiểm tra lại số lượng NVL.");
-              setErrorVisible(true);
-              return false;
-            }
-            const total = parseFloat((usedNum + leftNum).toFixed(4));
-            if (Math.abs(total - mat.estimated_input_qty) > 0.001) {
-              setMaterialErrors((prev) => ({
-                ...prev,
-                [mat.material_id]: `Tổng phải bằng định mức (${mat.estimated_input_qty} ${mat.unit}). Hiện: ${total}`,
-              }));
-              setErrorMessage("Tổng NVL (đã dùng + dư) phải bằng định mức.");
-              setErrorVisible(true);
-              return false;
-            }
-          } else {
-            const val = materialLeftQtys[mat.material_id];
-            if (val && val !== "") {
-              const numVal = Number(val);
-              if (numVal < 0) {
-                setMaterialErrors((prev) => ({
-                  ...prev,
-                  [mat.material_id]: "Số lượng không được âm",
-                }));
-                return false;
-              }
-              if (numVal > mat.estimated_input_qty) {
-                setMaterialErrors((prev) => ({
-                  ...prev,
-                  [mat.material_id]: `Tối đa ${mat.estimated_input_qty}`,
-                }));
-                return false;
-              }
-            }
-          }
           if (materialErrors[mat.material_id]) return false;
         }
       }
@@ -1350,12 +1296,12 @@ export default function OrderDetail() {
         }
       }
 
-      // --- Validate qty_good ---
+      // --- Resolve qty_good ---
       const defaultQty =
         qrPrepare?.suggested_qty ?? stage?.output_product?.quantity ?? 0;
       const qty = quantity ? Number(quantity) : defaultQty;
-      if (isNaN(qty) || qty <= 0) {
-        setErrorMessage("Số lượng phải lớn hơn 0");
+      if (isNaN(qty) || qty < 0) {
+        setErrorMessage("Số lượng không hợp lệ");
         setErrorVisible(true);
         return false;
       }
@@ -1364,143 +1310,151 @@ export default function OrderDetail() {
         setErrorVisible(true);
         return false;
       }
-      const maxAllowed =
-        qrPrepare?.max_allowed && qrPrepare.max_allowed > 0
-          ? qrPrepare.max_allowed
-          : null;
-      if (maxAllowed !== null && qty > maxAllowed) {
-        setErrorMessage(`Số lượng không được vượt quá ${maxAllowed}`);
-        setErrorVisible(true);
-        return false;
-      }
 
-      if (
-        qrPrepare?.reference_inputs &&
-        qrPrepare.reference_inputs.length > 0
-      ) {
-        let maxPrevQty = 0;
-        qrPrepare.reference_inputs.forEach((ref) => {
-          if (
-            ref.actual_qty_prev_stage &&
-            ref.actual_qty_prev_stage > maxPrevQty
-          ) {
-            maxPrevQty = ref.actual_qty_prev_stage;
-          }
-        });
-        if (maxPrevQty > 0) {
-          const minRequired = maxPrevQty * 0.85;
-          if (qty < minRequired) {
-            setErrorMessage(
-              `Sản lượng đạt không được bé hơn 85% của thực tế công đoạn trước (Tối thiểu: ${minRequired.toLocaleString("vi-VN", { maximumFractionDigits: 2 })})`,
-            );
-            setErrorVisible(true);
-            return false;
-          }
-        }
-      }
-
-      // --- Validate qty_bad ---
       const badQty = Number(qtyBad || 0);
-      if (isNaN(badQty) || badQty < 0) {
-        setErrorMessage("Số lượng hỏng không được âm");
-        setErrorVisible(true);
-        return false;
-      }
-      if (badQty > qty) {
-        setErrorMessage("Số lượng hỏng không được lớn hơn số lượng đạt");
-        setErrorVisible(true);
-        return false;
-      }
-
       const token = await SecureStore.getItemAsync("jwt");
 
-      // --- Build materials payload ---
-      const materials =
-        qrPrepare?.consumable_materials.map((mat) => {
-          if (shouldExcludeMaterial(mat.material_name) || mat._isPaperInPrint) {
-            return {
-              material_id: mat.material_id,
-              quantity_used: 0,
-              quantity_left: 0,
-              is_stock: false,
-            };
-          }
-          if (manualMode) {
-            const qtyUsed = parseReportQty(materialUsedQtys[mat.material_id]);
-            const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
-            return {
-              material_id: mat.material_id,
-              quantity_used: qtyUsed,
-              quantity_left: qtyLeft,
-              is_stock: resolveIsStock(qtyLeft),
-            };
-          } else {
-            const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
-            return {
-              material_id: mat.material_id,
-              quantity_used: 0,
-              quantity_left: qtyLeft,
-              is_stock: resolveIsStock(qtyLeft),
-            };
-          }
-        }) ?? [];
-
-      // --- Build reference inputs payload ---
-      const referenceInputs =
-        qrPrepare?.reference_inputs?.map((x) => ({
-          input_code: x.input_code,
-          input_name: x.input_name,
-          unit: x.unit,
-          quantity_used: parseReportQty(refUsedQtys[x.input_code]),
-          quantity_left: parseReportQty(refLeftQtys[x.input_code]),
-        })) ?? [];
-
       const outputCode = qrPrepare?.process_code ?? stage?.process_code ?? "";
+      const outputName = `BTP sau ${qrPrepare?.process_name ?? stage?.process_name ?? ""}`;
       const outputUnit =
         qrPrepare?.production_output_unit ??
         qrPrepare?.qty_unit ??
         stage?.output_product?.unit ??
         "";
 
-      if (manualMode) {
-        if (!outputCode) {
+      // --- Build materials list ---
+      // Nếu không có NVL nào → gửi 1 entry default material_id=999
+      // const hasMaterials =
+      //   (qrPrepare?.consumable_materials ?? []).filter(
+      //     (m) => !shouldExcludeMaterial(m.material_name) && !m._isPaperInPrint,
+      //   ).length > 0;
+
+      // --- Build materials list ---
+      type MaterialEntry = {
+        material_id: number;
+        quantity_used: number;
+        quantity_left: number;
+        is_stock: boolean;
+      };
+
+      // Lọc ra các NVL thực sự cần gửi (không bị exclude, không phải giấy in)
+      // --- Validate consumable materials ---
+      // Chỉ validate những NVL thực sự cần nhập (không exclude, không phải giấy in)
+      const activeMaterialsForSubmit = (
+        qrPrepare?.consumable_materials ?? []
+      ).filter(
+        (m) => !shouldExcludeMaterial(m.material_name) && !m._isPaperInPrint,
+      );
+
+      if (activeMaterialsForSubmit.length > 0) {
+        const unmapped = activeMaterialsForSubmit.filter((m) => !m.is_mapped);
+        if (unmapped.length > 0) {
           setErrorMessage(
-            "Thiếu mã output (process_code). Vui lòng kiểm tra lại.",
+            `Các NVL sau chưa được map:\n${unmapped.map((m) => `• ${m.material_name}`).join("\n")}`,
           );
           setErrorVisible(true);
           return false;
         }
-        if (!outputUnit) {
-          setErrorMessage("Thiếu đơn vị output. Vui lòng kiểm tra lại.");
-          setErrorVisible(true);
-          return false;
+        for (const mat of activeMaterialsForSubmit) {
+          if (materialErrors[mat.material_id]) return false;
         }
       }
 
-      const outputs = [
-        {
-          output_code: outputCode,
-          output_name: `BTP sau ${qrPrepare?.process_name ?? stage?.process_name ?? ""}`,
-          unit: outputUnit,
-          quantity_good: qty,
-          quantity_bad: badQty,
-        },
-      ];
+      let materials: MaterialEntry[];
+      if (activeMaterialsForSubmit.length === 0) {
+        // Ralo, Cắt, hoặc không có NVL → gửi default
+        materials = [
+          {
+            material_id: 999,
+            quantity_used: 0,
+            quantity_left: 0,
+            is_stock: false,
+          },
+        ];
+      } else {
+        materials = activeMaterialsForSubmit.map((mat) => {
+          const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
+          const qtyUsed = manualMode
+            ? parseReportQty(materialUsedQtys[mat.material_id])
+            : parseFloat((mat.estimated_input_qty - qtyLeft).toFixed(4));
+          return {
+            material_id: mat.material_id,
+            quantity_used: qtyUsed,
+            quantity_left: qtyLeft,
+            is_stock: resolveIsStock(qtyLeft),
+          };
+        });
+      }
 
+      // --- Build reference inputs list ---
+      // Nếu không có BTP → gửi 1 entry default
+      type RefEntry = {
+        input_code: string;
+        input_name: string;
+        unit: string;
+        quantity_used: number;
+        quantity_left: number;
+        is_stock: boolean;
+      };
+
+      let referenceInputs: RefEntry[];
+      const hasRefs =
+        manualMode && (qrPrepare?.reference_inputs ?? []).length > 0;
+
+      if (!hasRefs) {
+        referenceInputs = [
+          {
+            input_code: "null",
+            input_name: "Không có bán thành phẩm nhập kho",
+            unit: "null",
+            quantity_used: 0,
+            quantity_left: 0,
+            is_stock: false,
+          },
+        ];
+      } else {
+        referenceInputs = (qrPrepare!.reference_inputs ?? []).map((x) => ({
+          input_code: x.input_code,
+          input_name: x.input_name,
+          unit: x.unit,
+          quantity_used: parseReportQty(refUsedQtys[x.input_code]),
+          quantity_left: parseReportQty(refLeftQtys[x.input_code]),
+          is_stock: resolveIsStock(parseReportQty(refLeftQtys[x.input_code])),
+        }));
+      }
+
+      // --- Build FormData (flat repeated fields — matches curl) ---
       const formData = new FormData();
+
       formData.append("task_id", String(stage.task_id));
       formData.append("ttl_minutes", "60");
       formData.append("qty_good", String(qty));
       formData.append("use_manual_input", manualMode ? "true" : "false");
       formData.append("reason", reason.trim());
-      formData.append("materials_json", JSON.stringify(materials));
-      if (manualMode) {
-        formData.append(
-          "reference_inputs_json",
-          JSON.stringify(referenceInputs),
-        );
-        formData.append("outputs_json", JSON.stringify(outputs));
-      }
+
+      // Reference inputs — flat repeated
+      referenceInputs.forEach((ref) => {
+        formData.append("input_code", ref.input_code);
+        formData.append("input_name", ref.input_name);
+        formData.append("unit", ref.unit); // unit[0] = input unit
+      });
+
+      // Output — flat fields
+      formData.append("output_code", outputCode);
+      formData.append("output_name", outputName);
+      formData.append("unit", outputUnit); // unit[n] = output unit
+      formData.append("quantity_good", String(qty));
+      formData.append("quantity_bad", String(badQty));
+
+      // Materials — flat repeated
+      materials.forEach((mat) => {
+        formData.append("material_id", String(mat.material_id));
+        formData.append("quantity_used", String(mat.quantity_used));
+        formData.append("quantity_left", String(mat.quantity_left));
+        formData.append("is_stock", mat.is_stock ? "true" : "false");
+      });
+
+      // Images
       for (let i = 0; i < capturedImages.length; i++) {
         const img = capturedImages[i];
         formData.append("images", {
@@ -1858,7 +1812,9 @@ export default function OrderDetail() {
                     r.input_code === mat.code ||
                     r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
                 );
-                const prevQty = ref?.actual_qty_prev_stage;
+
+                const prevQty = mat.actual_quantity ?? "--";
+
                 return (
                   <View
                     key={idx}
@@ -1870,6 +1826,7 @@ export default function OrderDetail() {
                     <Text style={[styles.td, { flex: 2 }]}>
                       {mat.name || "Nguyên liệu"}
                     </Text>
+
                     <Text
                       style={[
                         styles.td,
@@ -1878,6 +1835,7 @@ export default function OrderDetail() {
                     >
                       {mat.quantity ?? 0}
                     </Text>
+
                     <Text
                       style={[
                         styles.td,
@@ -1889,10 +1847,11 @@ export default function OrderDetail() {
                         },
                       ]}
                     >
-                      {prevQty != null
+                      {prevQty != null && !Number.isNaN(Number(prevQty))
                         ? Number(prevQty).toLocaleString("vi-VN")
                         : "--"}
                     </Text>
+
                     <Text
                       style={[
                         styles.td,
@@ -2023,7 +1982,7 @@ export default function OrderDetail() {
               style={[styles.modalTitleRow, { borderLeftColor: theme.primary }]}
             >
               <Text style={styles.modalTitle}>
-                Báo cáo công đoạn {stage?.process_name}
+                Báo cáo công đoạn {stage?.process_name} - # {stage?.task_id}
               </Text>
             </View>
 

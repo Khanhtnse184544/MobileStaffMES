@@ -282,7 +282,7 @@ const getStatusLabel = (status: string) => {
     case "Scheduled":
       return "Chờ lịch";
     case "Unassigned":
-      return "Chưa gán";
+      return "Chưa bắt đầu";
     default:
       return status || "--";
   }
@@ -469,9 +469,9 @@ export default function Dashboard() {
         <View style={styles.taskHeader}>
           <View style={styles.taskIds}>
             <Text style={[styles.taskId, { color: theme.primary }]}>
-              Task #{item.task_id}
+              Lệnh #{item.prod_id}
             </Text>
-            <Text style={styles.taskProdId}>Lệnh: #{item.prod_id}</Text>
+            <Text style={styles.taskProdId}>Mã công đoạn: #{item.task_id}</Text>
           </View>
           <View
             style={[
@@ -638,7 +638,7 @@ export default function Dashboard() {
       <View style={[styles.searchBox, { borderColor: theme.borderLight }]}>
         <Ionicons name="search-outline" size={16} color={theme.primary} />
         <TextInput
-          placeholder="Tìm task ID, mã lệnh"
+          placeholder="Tìm mã công đoạn, mã lệnh"
           value={searchText}
           onChangeText={setSearchText}
           style={styles.searchInput}
