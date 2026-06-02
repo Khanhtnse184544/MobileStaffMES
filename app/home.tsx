@@ -301,6 +301,7 @@ const getDisplayStatus = (item: Order, userRole?: string) => {
     production_status === "Finished" ||
     production_status === "Paid" ||
     production_status === "PendingPaid" ||
+    production_status === "Pending" ||
     production_status === "Delivery" ||
     production_status === "Completed" ||
     production_status === "Importing"
@@ -587,7 +588,8 @@ export default function Home() {
       .filter(
         (o) =>
           getDisplayStatus(o, role) !== "HIDDEN" &&
-          o.production_approval_flow !== "WAITING_MANAGER",
+          o.production_approval_flow !== "WAITING_MANAGER" &&
+          o.production_status !== "Pending",
       )
       .filter((o) => {
         if (!role) return true;

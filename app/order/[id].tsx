@@ -257,6 +257,37 @@ type QrPrepare = {
 
 type QrMode = "estimate" | "manual";
 
+function normalizeProcessName(name: string | undefined): string {
+  return (name ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isPrintOrAfter(processName: string | undefined): boolean {
+  const p = normalizeProcessName(processName);
+  // Before print: Ralo, Cắt. From In and after must always allow manual (BTP input).
+  if (p.includes("ralo") || p.includes("cat") || p.includes("cắt")) return false;
+
+  const ordered = [
+    "ralo",
+    "cat",
+    "in",
+    "phu",
+    "can",
+    "boi",
+    "be",
+    "dut",
+    "dan",
+  ];
+  const idx = ordered.findIndex((k) => p.includes(k));
+  const idxPrint = ordered.indexOf("in");
+  if (idx >= 0) return idx >= idxPrint;
+
+  // Fallback: unknown stages are treated as "after print"
+  return p.length > 0;
+}
+
 function resolveQrMode(
   qrPrepare: QrPrepare | null,
   userToggleManual: boolean,
@@ -789,7 +820,11 @@ export default function OrderDetail() {
   const isGroupOrder = type === "group";
 
   // --- Resolve QR mode (mirrors web) ---
-  const qrMode = resolveQrMode(qrPrepare, useManualInputToggle);
+  const forceSemiFinishedInput = isPrintOrAfter(stage?.process_name);
+  const effectiveManualToggle = forceSemiFinishedInput
+    ? true
+    : useManualInputToggle;
+  const qrMode = resolveQrMode(qrPrepare, effectiveManualToggle);
   const isManual = isManualInputMode(qrMode);
   const showManualToggle = canShowManualToggle(qrPrepare, stage?.process_name);
 
@@ -1258,7 +1293,11 @@ export default function OrderDetail() {
         return false;
       }
 
-      const mode = resolveQrMode(qrPrepare, useManualInputToggle);
+      const forceSemiFinishedInput = isPrintOrAfter(stage?.process_name);
+      const effectiveManualToggle = forceSemiFinishedInput
+        ? true
+        : useManualInputToggle;
+      const mode = resolveQrMode(qrPrepare, effectiveManualToggle);
       const manualMode = isManualInputMode(mode);
 
       // --- Validate consumable materials ---
@@ -1362,15 +1401,21 @@ export default function OrderDetail() {
 
       let materials: MaterialEntry[];
       if (activeMaterialsForSubmit.length === 0) {
-        // Ralo, Cắt, hoặc không có NVL → gửi default
-        materials = [
-          {
-            material_id: 999,
-            quantity_used: 0,
-            quantity_left: 0,
-            is_stock: false,
-          },
-        ];
+        // Công đoạn Cắt: không tự động gửi default material_input nữa
+        const lowerProcess = normalizeProcessName(stage?.process_name);
+        if (lowerProcess.includes("cat")) {
+          materials = [];
+        } else {
+          // Ralo / hoặc không có NVL → gửi default để giữ tương thích API
+          materials = [
+            {
+              material_id: 999,
+              quantity_used: 0,
+              quantity_left: 0,
+              is_stock: false,
+            },
+          ];
+        }
       } else {
         materials = activeMaterialsForSubmit.map((mat) => {
           const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
@@ -1476,6 +1521,8 @@ export default function OrderDetail() {
       let data;
       try {
         data = JSON.parse(text);
+        console.log(data);
+        console.log(formData);
       } catch {
         throw new Error("Không parse được dữ liệu từ server");
       }
@@ -2082,9 +2129,10 @@ export default function OrderDetail() {
                           backgroundColor: theme.light,
                         },
                       ]}
-                      onPress={() =>
-                        setUseManualInputToggle(!useManualInputToggle)
-                      }
+                      onPress={() => {
+                        if (forceSemiFinishedInput) return;
+                        setUseManualInputToggle(!useManualInputToggle);
+                      }}
                       activeOpacity={0.8}
                     >
                       <View style={{ flex: 1, marginRight: 8 }}>
@@ -2101,7 +2149,7 @@ export default function OrderDetail() {
                         style={[
                           modalStyles.toggleSwitch,
                           {
-                            backgroundColor: useManualInputToggle
+                            backgroundColor: effectiveManualToggle
                               ? theme.primary
                               : "#d1d5db",
                           },
@@ -2111,7 +2159,7 @@ export default function OrderDetail() {
                           style={[
                             modalStyles.toggleKnob,
                             {
-                              alignSelf: useManualInputToggle
+                              alignSelf: effectiveManualToggle
                                 ? "flex-end"
                                 : "flex-start",
                             },
@@ -2131,23 +2179,14 @@ export default function OrderDetail() {
                           borderColor: theme.badge,
                         },
                       ]}
-                    >
-                      <Text
-                        style={[
-                          modalStyles.infoBannerTitle,
-                          { color: theme.badgeText },
-                        ]}
-                      >
-                        Chế độ nhập tay bắt buộc
-                      </Text>
+                    >                     
                       <Text
                         style={[
                           modalStyles.infoBannerText,
                           { color: theme.primary },
                         ]}
                       >
-                        Công đoạn này yêu cầu nhập chi tiết vật tư, BTP đầu vào
-                        và đầu ra.
+                        Nhập chi tiết vật tư, BTP đầu vào và đầu ra.
                       </Text>
                     </View>
                   )}
