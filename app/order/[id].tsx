@@ -196,6 +196,7 @@ type Stage = {
     name: string;
     code: string;
     quantity: number;
+    estimated_quantity: number;
     actual_quantity: number;
     unit: string;
   }[];
@@ -264,10 +265,20 @@ function normalizeProcessName(name: string | undefined): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function isRaloStage(processName: string | undefined): boolean {
+  return normalizeProcessName(processName).includes("ralo");
+}
+
+function isCutStage(processName: string | undefined): boolean {
+  const p = normalizeProcessName(processName);
+  return p.includes("cat");
+}
+
 function isPrintOrAfter(processName: string | undefined): boolean {
   const p = normalizeProcessName(processName);
   // Before print: Ralo, Cắt. From In and after must always allow manual (BTP input).
-  if (p.includes("ralo") || p.includes("cat") || p.includes("cắt")) return false;
+  if (p.includes("ralo") || p.includes("cat") || p.includes("cắt"))
+    return false;
 
   const ordered = [
     "ralo",
@@ -676,6 +687,7 @@ export default function OrderDetail() {
 
   const [qrPrepare, setQrPrepare] = useState<QrPrepare | null>(null);
   const [prepareLoading, setPrepareLoading] = useState(false);
+  const [createQrLoading, setCreateQrLoading] = useState(false);
 
   // --- Material state (mirrors web) ---
   const [materialLeftQtys, setMaterialLeftQtys] = useState<{
@@ -766,11 +778,7 @@ export default function OrderDetail() {
 
   const shouldExcludeMaterial = (matName: string) => {
     const lowerName = matName.toLowerCase();
-    const currentProcess = stage?.process_name || "";
-    const lowerProcess = currentProcess.toLowerCase();
-
-    // Ở công đoạn ralo và cắt thì không cần Nhập kho nguyên vật liệu
-    if (["ralo", "cắt", "cat"].includes(lowerProcess)) return true;
+    const lowerProcess = (stage?.process_name || "").toLowerCase();
 
     if (
       lowerProcess === "in" &&
@@ -1362,7 +1370,6 @@ export default function OrderDetail() {
         "";
 
       // --- Build materials list ---
-      // Nếu không có NVL nào → gửi 1 entry default material_id=999
       // const hasMaterials =
       //   (qrPrepare?.consumable_materials ?? []).filter(
       //     (m) => !shouldExcludeMaterial(m.material_name) && !m._isPaperInPrint,
@@ -1400,22 +1407,35 @@ export default function OrderDetail() {
       }
 
       let materials: MaterialEntry[];
+      const processIsRalo = isRaloStage(stage?.process_name);
+      const processIsCut = isCutStage(stage?.process_name);
+
       if (activeMaterialsForSubmit.length === 0) {
-        // Công đoạn Cắt: không tự động gửi default material_input nữa
-        const lowerProcess = normalizeProcessName(stage?.process_name);
-        if (lowerProcess.includes("cat")) {
-          materials = [];
-        } else {
-          // Ralo / hoặc không có NVL → gửi default để giữ tương thích API
-          materials = [
-            {
-              material_id: 999,
-              quantity_used: 0,
-              quantity_left: 0,
-              is_stock: false,
-            },
-          ];
+        materials = [];
+      } else if (processIsCut) {
+        materials = activeMaterialsForSubmit.map((mat) => ({
+          material_id: mat.material_id,
+          quantity_used: mat.estimated_input_qty,
+          quantity_left: 0,
+          is_stock: false,
+        }));
+      } else if (processIsRalo) {
+        for (const mat of activeMaterialsForSubmit) {
+          const qtyUsed = parseReportQty(materialUsedQtys[mat.material_id]);
+          if (qtyUsed <= 0) {
+            setErrorMessage(
+              `Vui lòng nhập lượng sử dụng cho NVL: ${mat.material_name}`,
+            );
+            setErrorVisible(true);
+            return false;
+          }
         }
+        materials = activeMaterialsForSubmit.map((mat) => ({
+          material_id: mat.material_id,
+          quantity_used: parseReportQty(materialUsedQtys[mat.material_id]),
+          quantity_left: 0,
+          is_stock: false,
+        }));
       } else {
         materials = activeMaterialsForSubmit.map((mat) => {
           const qtyLeft = parseReportQty(materialLeftQtys[mat.material_id]);
@@ -1450,7 +1470,7 @@ export default function OrderDetail() {
         referenceInputs = [
           {
             input_code: "null",
-            input_name: "Không có bán thành phẩm nhập kho",
+            input_name: "Không sử dụng bán thành phẩm",
             unit: "null",
             quantity_used: 0,
             quantity_left: 0,
@@ -1472,7 +1492,7 @@ export default function OrderDetail() {
       const formData = new FormData();
 
       formData.append("task_id", String(stage.task_id));
-      formData.append("ttl_minutes", "60");
+      formData.append("ttl_minutes", "10000");
       formData.append("qty_good", String(qty));
       formData.append("use_manual_input", manualMode ? "true" : "false");
       formData.append("reason", reason.trim());
@@ -1481,6 +1501,8 @@ export default function OrderDetail() {
       referenceInputs.forEach((ref) => {
         formData.append("input_code", ref.input_code);
         formData.append("input_name", ref.input_name);
+        formData.append("quantity_used", String(ref.quantity_used));
+        formData.append("quantity_left", String(ref.quantity_left));
         formData.append("unit", ref.unit); // unit[0] = input unit
       });
 
@@ -1512,32 +1534,35 @@ export default function OrderDetail() {
         } as any);
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/Tasks/qr`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, Accept: "text/plain" },
-        body: formData,
-      });
-      const text = await res.text();
-      let data;
+      setCreateQrLoading(true);
       try {
-        data = JSON.parse(text);
-        console.log(data);
-        console.log(formData);
-      } catch {
-        throw new Error("Không parse được dữ liệu từ server");
-      }
-      if (!res.ok) throw new Error(data?.message || "Tạo QR thất bại");
-      if (stage.status === "Finished") {
-        onFinishedRef.current();
-        return false;
-      }
+        const res = await fetch(`${API_BASE_URL}/api/Tasks/qr`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, Accept: "text/plain" },
+          body: formData,
+        });
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error("Không parse được dữ liệu từ server");
+        }
+        if (!res.ok) throw new Error(data?.message || "Tạo QR thất bại");
+        if (stage.status === "Finished") {
+          onFinishedRef.current();
+          return false;
+        }
 
-      setQrData(data);
-      setTokenCopied(false);
-      setQrVisible(true);
-      setCapturedImages([]);
-      setReason("");
-      return true;
+        setQrData(data);
+        setTokenCopied(false);
+        setQrVisible(true);
+        setCapturedImages([]);
+        setReason("");
+        return true;
+      } finally {
+        setCreateQrLoading(false);
+      }
     } catch (err: any) {
       setErrorMessage(err.message || "Có lỗi xảy ra khi tạo QR");
       setErrorVisible(true);
@@ -1688,6 +1713,9 @@ export default function OrderDetail() {
     qrPrepare?.consumable_materials.filter(
       (m) => !shouldExcludeMaterial(m.material_name) && !m._isPaperInPrint,
     ) ?? [];
+
+  const processIsRalo = isRaloStage(stage?.process_name);
+  const processIsCut = isCutStage(stage?.process_name);
 
   const hasAnyError =
     !!quantityError ||
@@ -1921,7 +1949,7 @@ export default function OrderDetail() {
           <InfoRow
             icon={<Ionicons name="cube-outline" size={18} color="#4b5563" />}
             label="Thành phẩm đầu ra ước tính từ đầu"
-            note="* Hiệu suất đạt 100%" // 👈 thêm dòng này
+            note="*Số lượng ước tính giả sử đạt hiêu suất 100%" // 👈 thêm dòng này
             value={`${stage?.output_product?.quantity ?? "--"} ${stage?.output_product?.name ?? "--"}`}
           />
           <InfoRow
@@ -2033,7 +2061,10 @@ export default function OrderDetail() {
               </Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={!createQrLoading}
+            >
               {/* ---- Bảng nguyên liệu đầu vào (GIỮ NGUYÊN) ---- */}
               {stage?.input_materials && stage.input_materials.length > 0 && (
                 <View style={styles.sectionBlock}>
@@ -2179,7 +2210,7 @@ export default function OrderDetail() {
                           borderColor: theme.badge,
                         },
                       ]}
-                    >                     
+                    >
                       <Text
                         style={[
                           modalStyles.infoBannerText,
@@ -2192,15 +2223,88 @@ export default function OrderDetail() {
                   )}
 
                   {/* ---- CONSUMABLE MATERIALS ---- */}
-                  {activeMaterials.length > 0 && (
+                  {activeMaterials.length > 0 && !processIsCut && (
                     <View style={styles.sectionBlock}>
                       <Text style={styles.sectionLabel}>
-                        {isManual
-                          ? "Nhập kho nguyên vật liệu"
+                        {processIsRalo
+                          ? "Nguyên vật liệu sử dụng"
                           : "Nhập kho nguyên vật liệu"}
                       </Text>
 
-                      {isManual
+                      {processIsRalo
+                        ? activeMaterials.map((mat) => (
+                            <View
+                              key={mat.material_id}
+                              style={[
+                                modalStyles.matCard,
+                                {
+                                  borderColor: materialErrors[mat.material_id]
+                                    ? "#fca5a5"
+                                    : !mat.is_mapped
+                                      ? "#fbbf24"
+                                      : "#e5e7eb",
+                                },
+                              ]}
+                            >
+                              <View style={modalStyles.matLabelRow}>
+                                <Text style={modalStyles.matName}>
+                                  {mat.material_name}
+                                </Text>
+                                <Text style={modalStyles.matHint}>
+                                  Định mức: {mat.estimated_input_qty}{" "}
+                                  {mat.unit}
+                                </Text>
+                              </View>
+                              {!mat.is_mapped && (
+                                <View style={modalStyles.warnRow}>
+                                  <Ionicons
+                                    name="warning-outline"
+                                    size={13}
+                                    color="#d97706"
+                                  />
+                                  <Text style={modalStyles.warnText}>
+                                    NVL chưa được map — Vui lòng liên hệ admin
+                                  </Text>
+                                </View>
+                              )}
+                              <Text style={modalStyles.inputLabel}>
+                                Lượng sử dụng
+                              </Text>
+                              <TextInput
+                                style={[
+                                  styles.input,
+                                  {
+                                    backgroundColor: "#fff",
+                                    marginBottom: 0,
+                                  },
+                                  materialErrors[mat.material_id]
+                                    ? styles.inputError
+                                    : null,
+                                ]}
+                                keyboardType="numeric"
+                                placeholder="Nhập lượng sử dụng"
+                                placeholderTextColor="#9ca3af"
+                                value={
+                                  materialUsedQtys[mat.material_id] ?? ""
+                                }
+                                onChangeText={(t) =>
+                                  handleMaterialUsedChange(
+                                    mat.material_id,
+                                    mat.estimated_input_qty,
+                                    t,
+                                  )
+                                }
+                              />
+                              {materialErrors[mat.material_id] ? (
+                                <Text
+                                  style={[styles.fieldError, { marginTop: 4 }]}
+                                >
+                                  {materialErrors[mat.material_id]}
+                                </Text>
+                              ) : null}
+                            </View>
+                          ))
+                        : isManual
                         ? /* Manual mode: show used + left pair */
                           activeMaterials.map((mat) => (
                             <View
@@ -2551,7 +2655,7 @@ export default function OrderDetail() {
                               </View>
                               <View style={{ flex: 1 }}>
                                 <Text style={modalStyles.inputLabel}>
-                                  Đã dùng (tự tính)
+                                  Đã dùng
                                 </Text>
                                 <View
                                   style={[
@@ -2800,7 +2904,11 @@ export default function OrderDetail() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[
+                  styles.cancelBtn,
+                  createQrLoading && styles.okBtnDisabled,
+                ]}
+                disabled={createQrLoading}
                 onPress={() => {
                   setModalVisible(false);
                   setCapturedImages([]);
@@ -2813,17 +2921,29 @@ export default function OrderDetail() {
                 style={[
                   styles.okBtn,
                   { backgroundColor: theme.primary },
-                  (hasAnyError || prepareLoading) && styles.okBtnDisabled,
+                  (hasAnyError || prepareLoading || createQrLoading) &&
+                    styles.okBtnDisabled,
                 ]}
-                disabled={hasAnyError || prepareLoading}
+                disabled={hasAnyError || prepareLoading || createQrLoading}
                 onPress={async () => {
                   const success = await createQr();
                   if (success) setModalVisible(false);
                 }}
               >
-                <Text style={styles.okText}>Xác nhận</Text>
+                {createQrLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.okText}>Xác nhận</Text>
+                )}
               </TouchableOpacity>
             </View>
+
+            {createQrLoading && (
+              <View style={styles.modalLoadingOverlay} pointerEvents="auto">
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={styles.modalLoadingText}>Đang tạo QR...</Text>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -3337,6 +3457,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 8,
+    overflow: "hidden",
+  },
+  modalLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.82)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+    borderRadius: 16,
+  },
+  modalLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
   },
   modalTitleRow: {
     borderLeftWidth: 4,
