@@ -1516,8 +1516,8 @@ export default function OrderDetail() {
       // Materials — flat repeated
       materials.forEach((mat) => {
         formData.append("material_id", String(mat.material_id));
-        formData.append("quantity_used", String(mat.quantity_used));
-        formData.append("quantity_left", String(mat.quantity_left));
+        formData.append("mat_quantity_used", String(mat.quantity_used));
+        formData.append("mat_quantity_left", String(mat.quantity_left));
         formData.append("is_stock", mat.is_stock ? "true" : "false");
       });
 
@@ -1543,6 +1543,7 @@ export default function OrderDetail() {
         });
         const text = await res.text();
         let data;
+        console.log("QR Data:", formData);
         try {
           data = JSON.parse(text);
         } catch {
@@ -2093,7 +2094,7 @@ export default function OrderDetail() {
                         r.input_code === mat.code ||
                         r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
                     );
-                    const prevQty = ref?.actual_qty_prev_stage;
+                    const prevQty = mat.quantity; //ref?.actual_qty_prev_stage;
                     return (
                       <View
                         key={idx}
@@ -2251,8 +2252,7 @@ export default function OrderDetail() {
                                   {mat.material_name}
                                 </Text>
                                 <Text style={modalStyles.matHint}>
-                                  Định mức: {mat.estimated_input_qty}{" "}
-                                  {mat.unit}
+                                  Định mức: {mat.estimated_input_qty} {mat.unit}
                                 </Text>
                               </View>
                               {!mat.is_mapped && (
@@ -2284,9 +2284,7 @@ export default function OrderDetail() {
                                 keyboardType="numeric"
                                 placeholder="Nhập lượng sử dụng"
                                 placeholderTextColor="#9ca3af"
-                                value={
-                                  materialUsedQtys[mat.material_id] ?? ""
-                                }
+                                value={materialUsedQtys[mat.material_id] ?? ""}
                                 onChangeText={(t) =>
                                   handleMaterialUsedChange(
                                     mat.material_id,
@@ -2305,110 +2303,214 @@ export default function OrderDetail() {
                             </View>
                           ))
                         : isManual
-                        ? /* Manual mode: show used + left pair */
-                          activeMaterials.map((mat) => (
-                            <View
-                              key={mat.material_id}
-                              style={[
-                                modalStyles.matCard,
-                                {
-                                  borderColor: materialErrors[mat.material_id]
-                                    ? "#fca5a5"
-                                    : !mat.is_mapped
-                                      ? "#fbbf24"
-                                      : "#e5e7eb",
-                                },
-                              ]}
-                            >
-                              <View style={modalStyles.matLabelRow}>
-                                <Text style={modalStyles.matName}>
-                                  {mat.material_name}
-                                </Text>
-                                <Text style={modalStyles.matHint}>
-                                  Định mức: {mat.estimated_input_qty} {mat.unit}
-                                </Text>
-                              </View>
-                              {!mat.is_mapped && (
-                                <View style={modalStyles.warnRow}>
-                                  <Ionicons
-                                    name="warning-outline"
-                                    size={13}
-                                    color="#d97706"
-                                  />
-                                  <Text style={modalStyles.warnText}>
-                                    NVL chưa được map — Vui lòng liên hệ admin
-                                  </Text>
-                                </View>
-                              )}
+                          ? /* Manual mode: show used + left pair */
+                            activeMaterials.map((mat) => (
                               <View
+                                key={mat.material_id}
                                 style={[
-                                  modalStyles.infoBannerSmall,
-                                  { backgroundColor: theme.light },
+                                  modalStyles.matCard,
+                                  {
+                                    borderColor: materialErrors[mat.material_id]
+                                      ? "#fca5a5"
+                                      : !mat.is_mapped
+                                        ? "#fbbf24"
+                                        : "#e5e7eb",
+                                  },
                                 ]}
                               >
-                                <Ionicons
-                                  name="information-circle-outline"
-                                  size={13}
-                                  color={theme.primary}
-                                />
-                                <Text
+                                <View style={modalStyles.matLabelRow}>
+                                  <Text style={modalStyles.matName}>
+                                    {mat.material_name}
+                                  </Text>
+                                  <Text style={modalStyles.matHint}>
+                                    Định mức: {mat.estimated_input_qty}{" "}
+                                    {mat.unit}
+                                  </Text>
+                                </View>
+                                {!mat.is_mapped && (
+                                  <View style={modalStyles.warnRow}>
+                                    <Ionicons
+                                      name="warning-outline"
+                                      size={13}
+                                      color="#d97706"
+                                    />
+                                    <Text style={modalStyles.warnText}>
+                                      NVL chưa được map — Vui lòng liên hệ admin
+                                    </Text>
+                                  </View>
+                                )}
+                                <View
                                   style={[
-                                    modalStyles.infoBannerSmallText,
-                                    { color: theme.primary },
+                                    modalStyles.infoBannerSmall,
+                                    { backgroundColor: theme.light },
                                   ]}
                                 >
-                                  Đã dùng + Dư = định mức (
-                                  {mat.estimated_input_qty} {mat.unit})
-                                </Text>
-                              </View>
-                              <View style={modalStyles.matInputRow}>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={modalStyles.inputLabel}>
-                                    Lượng đã dùng
-                                  </Text>
-                                  <TextInput
-                                    style={[
-                                      styles.input,
-                                      {
-                                        backgroundColor: "#fff",
-                                        marginBottom: 0,
-                                      },
-                                      materialErrors[mat.material_id]
-                                        ? styles.inputError
-                                        : null,
-                                    ]}
-                                    keyboardType="numeric"
-                                    placeholder="Nhập lượng dùng"
-                                    placeholderTextColor="#9ca3af"
-                                    value={
-                                      materialUsedQtys[mat.material_id] ?? ""
-                                    }
-                                    onChangeText={(t) =>
-                                      handleMaterialUsedChange(
-                                        mat.material_id,
-                                        mat.estimated_input_qty,
-                                        t,
-                                      )
-                                    }
+                                  <Ionicons
+                                    name="information-circle-outline"
+                                    size={13}
+                                    color={theme.primary}
                                   />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={modalStyles.inputLabel}>
-                                    Lượng dư hoàn kho
+                                  <Text
+                                    style={[
+                                      modalStyles.infoBannerSmallText,
+                                      { color: theme.primary },
+                                    ]}
+                                  >
+                                    Đã dùng + Dư = định mức (
+                                    {mat.estimated_input_qty} {mat.unit})
                                   </Text>
+                                </View>
+                                <View style={modalStyles.matInputRow}>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={modalStyles.inputLabel}>
+                                      Lượng đã dùng
+                                    </Text>
+                                    <TextInput
+                                      style={[
+                                        styles.input,
+                                        {
+                                          backgroundColor: "#fff",
+                                          marginBottom: 0,
+                                        },
+                                        materialErrors[mat.material_id]
+                                          ? styles.inputError
+                                          : null,
+                                      ]}
+                                      keyboardType="numeric"
+                                      placeholder="Nhập lượng dùng"
+                                      placeholderTextColor="#9ca3af"
+                                      value={
+                                        materialUsedQtys[mat.material_id] ?? ""
+                                      }
+                                      onChangeText={(t) =>
+                                        handleMaterialUsedChange(
+                                          mat.material_id,
+                                          mat.estimated_input_qty,
+                                          t,
+                                        )
+                                      }
+                                    />
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={modalStyles.inputLabel}>
+                                      Lượng dư hoàn kho
+                                    </Text>
+                                    <TextInput
+                                      style={[
+                                        styles.input,
+                                        {
+                                          backgroundColor: "#fff",
+                                          marginBottom: 0,
+                                        },
+                                        materialErrors[mat.material_id]
+                                          ? styles.inputError
+                                          : null,
+                                      ]}
+                                      keyboardType="numeric"
+                                      placeholder="Nhập lượng dư"
+                                      placeholderTextColor="#9ca3af"
+                                      value={
+                                        materialLeftQtys[mat.material_id] ?? ""
+                                      }
+                                      onChangeText={(t) =>
+                                        handleMaterialLeftChange(
+                                          mat.material_id,
+                                          mat.estimated_input_qty,
+                                          t,
+                                        )
+                                      }
+                                    />
+                                  </View>
+                                </View>
+                                {/* Nhập kho badge */}
+                                <View style={modalStyles.stockBadgeRow}>
+                                  <Text style={modalStyles.inputLabel}>
+                                    Nhập kho:
+                                  </Text>
+                                  <View
+                                    style={[
+                                      modalStyles.stockBadge,
+                                      resolveIsStock(
+                                        parseReportQty(
+                                          materialLeftQtys[mat.material_id],
+                                        ),
+                                      )
+                                        ? modalStyles.stockBadgeYes
+                                        : modalStyles.stockBadgeNo,
+                                    ]}
+                                  >
+                                    <Text
+                                      style={[
+                                        modalStyles.stockBadgeText,
+                                        resolveIsStock(
+                                          parseReportQty(
+                                            materialLeftQtys[mat.material_id],
+                                          ),
+                                        )
+                                          ? { color: "#065f46" }
+                                          : { color: "#6b7280" },
+                                      ]}
+                                    >
+                                      {resolveIsStock(
+                                        parseReportQty(
+                                          materialLeftQtys[mat.material_id],
+                                        ),
+                                      )
+                                        ? "Có"
+                                        : "Không"}
+                                    </Text>
+                                  </View>
+                                </View>
+                                {materialErrors[mat.material_id] ? (
+                                  <Text
+                                    style={[
+                                      styles.fieldError,
+                                      { marginTop: 4 },
+                                    ]}
+                                  >
+                                    {materialErrors[mat.material_id]}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ))
+                          : /* Estimate mode: only left qty */
+                            activeMaterials.map((mat) => (
+                              <View
+                                key={mat.material_id}
+                                style={styles.materialRow}
+                              >
+                                <View style={styles.materialLabelRow}>
+                                  <Text style={styles.materialName}>
+                                    {mat.material_name}
+                                  </Text>
+                                  <Text style={styles.materialHint}>
+                                    Đã xuất: {mat.estimated_input_qty}{" "}
+                                    {mat.unit}
+                                  </Text>
+                                </View>
+                                {!mat.is_mapped && (
+                                  <View style={modalStyles.warnRow}>
+                                    <Ionicons
+                                      name="warning-outline"
+                                      size={13}
+                                      color="#d97706"
+                                    />
+                                    <Text style={modalStyles.warnText}>
+                                      NVL chưa được map — Vui lòng liên hệ admin
+                                    </Text>
+                                  </View>
+                                )}
+                                <View style={modalStyles.estimateRow}>
                                   <TextInput
                                     style={[
                                       styles.input,
-                                      {
-                                        backgroundColor: "#fff",
-                                        marginBottom: 0,
-                                      },
+                                      { flex: 1, textAlign: "right" },
                                       materialErrors[mat.material_id]
                                         ? styles.inputError
                                         : null,
                                     ]}
                                     keyboardType="numeric"
-                                    placeholder="Nhập lượng dư"
+                                    placeholder="Lượng dư (mặc định: 0)"
                                     placeholderTextColor="#9ca3af"
                                     value={
                                       materialLeftQtys[mat.material_id] ?? ""
@@ -2421,147 +2523,48 @@ export default function OrderDetail() {
                                       )
                                     }
                                   />
-                                </View>
-                              </View>
-                              {/* Nhập kho badge */}
-                              <View style={modalStyles.stockBadgeRow}>
-                                <Text style={modalStyles.inputLabel}>
-                                  Nhập kho:
-                                </Text>
-                                <View
-                                  style={[
-                                    modalStyles.stockBadge,
-                                    resolveIsStock(
-                                      parseReportQty(
-                                        materialLeftQtys[mat.material_id],
-                                      ),
-                                    )
-                                      ? modalStyles.stockBadgeYes
-                                      : modalStyles.stockBadgeNo,
-                                  ]}
-                                >
-                                  <Text
+                                  <View
                                     style={[
-                                      modalStyles.stockBadgeText,
+                                      modalStyles.stockBadge,
                                       resolveIsStock(
                                         parseReportQty(
                                           materialLeftQtys[mat.material_id],
                                         ),
                                       )
-                                        ? { color: "#065f46" }
-                                        : { color: "#6b7280" },
+                                        ? modalStyles.stockBadgeYes
+                                        : modalStyles.stockBadgeNo,
+                                      { marginLeft: 8, alignSelf: "center" },
                                     ]}
                                   >
-                                    {resolveIsStock(
-                                      parseReportQty(
-                                        materialLeftQtys[mat.material_id],
-                                      ),
-                                    )
-                                      ? "Có"
-                                      : "Không"}
-                                  </Text>
-                                </View>
-                              </View>
-                              {materialErrors[mat.material_id] ? (
-                                <Text
-                                  style={[styles.fieldError, { marginTop: 4 }]}
-                                >
-                                  {materialErrors[mat.material_id]}
-                                </Text>
-                              ) : null}
-                            </View>
-                          ))
-                        : /* Estimate mode: only left qty */
-                          activeMaterials.map((mat) => (
-                            <View
-                              key={mat.material_id}
-                              style={styles.materialRow}
-                            >
-                              <View style={styles.materialLabelRow}>
-                                <Text style={styles.materialName}>
-                                  {mat.material_name}
-                                </Text>
-                                <Text style={styles.materialHint}>
-                                  Đã xuất: {mat.estimated_input_qty} {mat.unit}
-                                </Text>
-                              </View>
-                              {!mat.is_mapped && (
-                                <View style={modalStyles.warnRow}>
-                                  <Ionicons
-                                    name="warning-outline"
-                                    size={13}
-                                    color="#d97706"
-                                  />
-                                  <Text style={modalStyles.warnText}>
-                                    NVL chưa được map — Vui lòng liên hệ admin
-                                  </Text>
-                                </View>
-                              )}
-                              <View style={modalStyles.estimateRow}>
-                                <TextInput
-                                  style={[
-                                    styles.input,
-                                    { flex: 1, textAlign: "right" },
-                                    materialErrors[mat.material_id]
-                                      ? styles.inputError
-                                      : null,
-                                  ]}
-                                  keyboardType="numeric"
-                                  placeholder="Lượng dư (mặc định: 0)"
-                                  placeholderTextColor="#9ca3af"
-                                  value={
-                                    materialLeftQtys[mat.material_id] ?? ""
-                                  }
-                                  onChangeText={(t) =>
-                                    handleMaterialLeftChange(
-                                      mat.material_id,
-                                      mat.estimated_input_qty,
-                                      t,
-                                    )
-                                  }
-                                />
-                                <View
-                                  style={[
-                                    modalStyles.stockBadge,
-                                    resolveIsStock(
-                                      parseReportQty(
-                                        materialLeftQtys[mat.material_id],
-                                      ),
-                                    )
-                                      ? modalStyles.stockBadgeYes
-                                      : modalStyles.stockBadgeNo,
-                                    { marginLeft: 8, alignSelf: "center" },
-                                  ]}
-                                >
-                                  <Text
-                                    style={[
-                                      modalStyles.stockBadgeText,
-                                      resolveIsStock(
+                                    <Text
+                                      style={[
+                                        modalStyles.stockBadgeText,
+                                        resolveIsStock(
+                                          parseReportQty(
+                                            materialLeftQtys[mat.material_id],
+                                          ),
+                                        )
+                                          ? { color: "#065f46" }
+                                          : { color: "#6b7280" },
+                                      ]}
+                                    >
+                                      {resolveIsStock(
                                         parseReportQty(
                                           materialLeftQtys[mat.material_id],
                                         ),
                                       )
-                                        ? { color: "#065f46" }
-                                        : { color: "#6b7280" },
-                                    ]}
-                                  >
-                                    {resolveIsStock(
-                                      parseReportQty(
-                                        materialLeftQtys[mat.material_id],
-                                      ),
-                                    )
-                                      ? "Nhập kho"
-                                      : "Không nhập kho"}
-                                  </Text>
+                                        ? "Nhập kho"
+                                        : "Không nhập kho"}
+                                    </Text>
+                                  </View>
                                 </View>
+                                {materialErrors[mat.material_id] ? (
+                                  <Text style={styles.fieldError}>
+                                    {materialErrors[mat.material_id]}
+                                  </Text>
+                                ) : null}
                               </View>
-                              {materialErrors[mat.material_id] ? (
-                                <Text style={styles.fieldError}>
-                                  {materialErrors[mat.material_id]}
-                                </Text>
-                              ) : null}
-                            </View>
-                          ))}
+                            ))}
                     </View>
                   )}
 
