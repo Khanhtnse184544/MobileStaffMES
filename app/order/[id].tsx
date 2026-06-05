@@ -2094,7 +2094,7 @@ export default function OrderDetail() {
                         r.input_code === mat.code ||
                         r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
                     );
-                    const prevQty = mat.quantity; //ref?.actual_qty_prev_stage;
+                    const prevQty = mat.actual_quantity; //ref?.actual_qty_prev_stage;
                     return (
                       <View
                         key={idx}
