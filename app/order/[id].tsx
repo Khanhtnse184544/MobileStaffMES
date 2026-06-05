@@ -254,6 +254,50 @@ type QrPrepare = {
   production_output_unit?: string;
 };
 
+type InputMaterialRow = Stage["input_materials"][number];
+
+function findReferenceInputForMaterial(
+  mat: Pick<InputMaterialRow, "code" | "name">,
+  refs?: ReferenceInput[],
+): ReferenceInput | undefined {
+  if (!refs?.length) return undefined;
+  return (
+    refs.find(
+      (r) =>
+        r.input_code === mat.code ||
+        r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
+    ) ??
+    (mat.code === "PREV" && refs.length === 1 ? refs[0] : undefined)
+  );
+}
+
+function getInputMaterialActualQty(
+  mat: InputMaterialRow,
+  ref?: ReferenceInput,
+): number | null {
+  if (
+    mat.actual_quantity != null &&
+    !Number.isNaN(Number(mat.actual_quantity))
+  ) {
+    return Number(mat.actual_quantity);
+  }
+  if (
+    ref?.actual_qty_prev_stage != null &&
+    !Number.isNaN(Number(ref.actual_qty_prev_stage))
+  ) {
+    return Number(ref.actual_qty_prev_stage);
+  }
+  return null;
+}
+
+function getInputMaterialPrevStageQty(
+  mat: InputMaterialRow,
+  ref?: ReferenceInput,
+): number | null {
+  if (mat.code !== "PREV") return null;
+  return getInputMaterialActualQty(mat, ref);
+}
+
 /* ================= QR MODE HELPERS (mirrors web utils/productionReport) ================= */
 
 type QrMode = "estimate" | "manual";
@@ -1076,7 +1120,10 @@ export default function OrderDetail() {
               s.input_materials?.map((m: any) => ({
                 name: m.name,
                 code: m.code,
-                quantity: m.estimated_qty,
+                quantity: m.estimated_qty ?? m.estimated_quantity ?? 0,
+                estimated_quantity:
+                  m.estimated_qty ?? m.estimated_quantity ?? 0,
+                actual_quantity: m.actual_qty ?? m.actual_quantity ?? null,
                 unit: m.unit,
               })) || [],
             output_product:
@@ -1084,10 +1131,17 @@ export default function OrderDetail() {
                 ? {
                     name: s.outputs[0].name,
                     code: s.outputs[0].code,
-                    quantity: s.outputs[0].estimated_qty,
+                    quantity: s.outputs[0].estimated_qty ?? 0,
+                    actual_quantity: s.outputs[0].actual_qty ?? 0,
                     unit: s.outputs[0].unit,
                   }
-                : { name: "", code: "", quantity: 0, unit: "" },
+                : {
+                    name: "",
+                    code: "",
+                    quantity: 0,
+                    actual_quantity: 0,
+                    unit: "",
+                  },
             qty_good: s.actual_output_qty,
             qty_bad: 0,
           })) || [];
@@ -1883,13 +1937,11 @@ export default function OrderDetail() {
                 </Text>
               </View>
               {stage.input_materials.map((mat, idx) => {
-                const ref = qrPrepare?.reference_inputs?.find(
-                  (r) =>
-                    r.input_code === mat.code ||
-                    r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
+                const ref = findReferenceInputForMaterial(
+                  mat,
+                  qrPrepare?.reference_inputs,
                 );
-
-                const prevQty = mat.actual_quantity ?? "--";
+                const actualQty = getInputMaterialActualQty(mat, ref);
 
                 return (
                   <View
@@ -1918,13 +1970,13 @@ export default function OrderDetail() {
                         {
                           flex: 1,
                           textAlign: "center",
-                          fontWeight: prevQty != null ? "600" : "400",
-                          color: prevQty != null ? "#2563eb" : "#9ca3af",
+                          fontWeight: actualQty != null ? "600" : "400",
+                          color: actualQty != null ? "#2563eb" : "#9ca3af",
                         },
                       ]}
                     >
-                      {prevQty != null && !Number.isNaN(Number(prevQty))
-                        ? Number(prevQty).toLocaleString("vi-VN")
+                      {actualQty != null
+                        ? actualQty.toLocaleString("vi-VN")
                         : "--"}
                     </Text>
 
@@ -2089,12 +2141,11 @@ export default function OrderDetail() {
                     </Text>
                   </View>
                   {stage.input_materials.map((mat, idx) => {
-                    const ref = qrPrepare?.reference_inputs?.find(
-                      (r) =>
-                        r.input_code === mat.code ||
-                        r.input_name?.toLowerCase() === mat.name?.toLowerCase(),
+                    const ref = findReferenceInputForMaterial(
+                      mat,
+                      qrPrepare?.reference_inputs,
                     );
-                    const prevQty = mat.actual_quantity; //ref?.actual_qty_prev_stage;
+                    const prevQty = getInputMaterialPrevStageQty(mat, ref);
                     return (
                       <View
                         key={idx}
