@@ -620,7 +620,11 @@ export default function Home() {
       .filter((o) => {
         if (!searchText) return true;
         const text = searchText.toLowerCase();
-        return o.prod_id.toString().includes(text);
+        const matchProdId = o.prod_id.toString().includes(text);
+        const matchTaskId = o.stage_statuses?.some((s) =>
+          s.task_id?.toString().includes(text),
+        );
+        return matchProdId || matchTaskId;
       })
       .sort((a, b) => {
         const priorityOrder: Record<FilterKey, number> = {
@@ -1127,7 +1131,7 @@ export default function Home() {
       <View style={[styles.searchBox, { borderColor: theme.primary + "50" }]}>
         <Ionicons name="search-outline" size={18} color={theme.primary} />
         <TextInput
-          placeholder="Tìm mã lệnh"
+          placeholder="Tìm mã lệnh / mã công đoạn"
           value={searchText}
           onChangeText={setSearchText}
           style={{ flex: 1, marginLeft: 8 }}

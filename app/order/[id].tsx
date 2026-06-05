@@ -1217,7 +1217,10 @@ export default function OrderDetail() {
       const initRefUsed: { [code: string]: string } = {};
       const initRefLeft: { [code: string]: string } = {};
       (data.reference_inputs || []).forEach((x) => {
-        initRefUsed[x.input_code] = String(x.estimated_qty ?? 0);
+        initRefUsed[x.input_code] =
+          x.actual_qty_prev_stage != null
+            ? String(x.actual_qty_prev_stage)
+            : String(x.estimated_qty ?? 0);
         initRefLeft[x.input_code] = "0";
       });
       setRefUsedQtys(initRefUsed);
@@ -1539,6 +1542,7 @@ export default function OrderDetail() {
           quantity_used: parseReportQty(refUsedQtys[x.input_code]),
           quantity_left: parseReportQty(refLeftQtys[x.input_code]),
           is_stock: resolveIsStock(parseReportQty(refLeftQtys[x.input_code])),
+          actual_qty_prev_stage: x.actual_qty_prev_stage ?? 0,
         }));
       }
 
@@ -2729,7 +2733,12 @@ export default function OrderDetail() {
                                       textAlign: "right",
                                     }}
                                   >
-                                    {refUsedQtys[ref.input_code] ?? "—"}
+                                    {refUsedQtys[ref.input_code] != null &&
+                                    refUsedQtys[ref.input_code] !== ""
+                                      ? Number(
+                                          refUsedQtys[ref.input_code],
+                                        ).toLocaleString("vi-VN")
+                                      : "—"}
                                   </Text>
                                 </View>
                               </View>
