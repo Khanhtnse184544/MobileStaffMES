@@ -527,7 +527,7 @@ export default function Home() {
 
   /* ================= API ================= */
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (currentRole?: string) => {
     try {
       setLoading(true);
       const token = await SecureStore.getItemAsync("jwt");
@@ -556,19 +556,33 @@ export default function Home() {
       ) as Order[];
       setOrders(unique);
 
+
+      const roleToUse = currentRole ?? role;
+
       // Fetch DB notifications using the staff-get-noti API
       try {
         const notifRes = await fetch(
-          `${API_BASE_URL}/api/Notifications/staff-get-noti?role=${role}`,
+          `${API_BASE_URL}/api/Notification/staff-get-noti?role=${roleToUse}`, // bỏ 's'
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (notifRes.ok) {
           const notifText = await notifRes.text();
           if (notifText) {
             const notifData = JSON.parse(notifText);
-            setNotifications(
-              Array.isArray(notifData) ? notifData : (notifData.data ?? []),
-            );
+            const list = Array.isArray(notifData) ? notifData : (notifData.data ?? []);
+    
+            // Map camelCase → snake_case
+            const mapped = list.map((n: any) => ({
+              id: n.id,
+              content: n.content,
+              is_check: n.isCheck,
+              order_request_id: n.orderRequestId,
+              role_id: n.roleId,
+              status: n.status,
+              time: n.time,
+              user_id: n.userId,
+            }));
+            setNotifications(mapped);
           }
         }
       } catch (e) {
@@ -744,12 +758,12 @@ export default function Home() {
       if (roleId) {
         const roleName = getRoleName(roleId);
         setRole(roleName);
-
-        // Join machine group sau khi SignalR connected
         await startSignalR();
         await joinMachineGroups(roleName);
+        fetchOrders(roleName); // truyền roleName trực tiếp
+      } else {
+        fetchOrders();
       }
-      fetchOrders();
     };
 
     loadRole();
